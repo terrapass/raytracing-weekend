@@ -1,0 +1,13 @@
+# CMake build directory
+/build/
+
+# Editor-generated temporary files
+*.*~
+
+# Visual Studio Code workspace directory
+.vscode/
+
+# Visual Studio workspace directory and private files
+.vs/
+CMakeSettings.json
+
