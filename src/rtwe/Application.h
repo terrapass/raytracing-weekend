@@ -1,18 +1,8 @@
+#ifndef RTWE_APPLICATION_H
+#define RTWE_APPLICATION_H
+
 #include <sdl2utils/raii.h>
 #include <sdl2utils/pointers.h>
-
-//
-// Forward declarations
-//
-
-struct SDL_Window;
-
-namespace sdl2utils::raii
-{
-
-class ScopedSDLCore;
-
-} // namespace sdl2utils::raii
 
 //
 //
@@ -60,3 +50,5 @@ private: // Members
 };
 
 } // namespace rtwe
+
+#endif
