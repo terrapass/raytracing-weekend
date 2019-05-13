@@ -41,7 +41,7 @@ int Application::run()
     const sdl2utils::SDL_RendererPtr renderer = createRenderer(window.get());
     assert(renderer);
 
-    sdl2utils::waitKeyPressed();
+    sdl2utils::waitEscOrCrossPressed();
 
     return 0;
 }
