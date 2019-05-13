@@ -35,14 +35,17 @@ private: // Service
 
     static sdl2utils::SDL_RendererPtr createRenderer(SDL_Window * const pWindow);
 
-private: // Constants
+    static sdl2utils::SDL_TexturePtr createStreamingTexture(SDL_Renderer * const pRenderer);
 
-    static const int SDL_INIT_FLAGS;
+private: // Constants
 
     static const int WINDOW_WIDTH;
     static const int WINDOW_HEIGHT;
 
     static const char * const WINDOW_TITLE;
+
+    static const int    SDL_INIT_FLAGS;
+    static const Uint32 SDL_TEXTURE_PIXELFORMAT;
 
 private: // Members
 
