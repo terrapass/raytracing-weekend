@@ -56,7 +56,7 @@ int Application::run()
         for (int x = 0; x < WINDOW_WIDTH; x++)
         {
             const int      pixelOffset = y*pitch + x*sizeof(Uint32);
-            Uint32 * const pixel = reinterpret_cast<Uint32 *>(pixels + pixelOffset); // TODO: Fix warning
+            Uint32 * const pixel = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
 
             const Uint8 r = static_cast<char>((static_cast<float>(y)/WINDOW_HEIGHT) * 0xFF);
             const Uint8 g = 0x80;
