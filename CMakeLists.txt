@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 cmake_policy(SET CMP0048 NEW) # Set version strings from project() call
 project(RayTracingWeekend VERSION 0.0.1)
 
@@ -44,6 +44,8 @@ if(NOT RTWE_BOOST_LOG_DYN_LINK)
 endif()
 find_package(Boost COMPONENTS log REQUIRED) # Boost.Log
 
+find_package(Eigen3 3.3 REQUIRED NO_MODULE) # Eigen3
+
 # Select *.cpp files
 file(
     GLOB_RECURSE
@@ -84,6 +86,7 @@ target_link_libraries(
     ${SDL2_TTF_LIBRARIES}
     ${SDL2_MIXER_LIBRARIES}
     Boost::log
+    Eigen3::Eigen
 )
 
 # Main RayTracingWeekend executable
