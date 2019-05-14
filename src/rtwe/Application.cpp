@@ -6,6 +6,8 @@
 #include <sdl2utils/event_utils.h>
 #include <sdl2utils/guards.h>
 
+#include <Eigen/Dense>
+
 namespace rtwe
 {
 
@@ -48,33 +50,37 @@ int Application::run()
 
     void * pixels = nullptr;
     int    pitch  = -1;
-    const int lockResult = SDL_LockTexture(streamingTexture.get(), nullptr, &pixels, &pitch);
-    assert(lockResult == 0 && "SDL_LockTexture() must succeed");
 
-    for (int y = 0; y < WINDOW_HEIGHT; y++)
+    while (!sdl2utils::escOrCrossPressed())
     {
-        for (int x = 0; x < WINDOW_WIDTH; x++)
+        const int lockResult = SDL_LockTexture(streamingTexture.get(), nullptr, &pixels, &pitch);
+        assert(lockResult == 0 && "SDL_LockTexture() must succeed");
+
+        const auto windowMatrix = Eigen::Matrix<float, WINDOW_HEIGHT, WINDOW_WIDTH>::Random();
+
+        for (int y = 0; y < WINDOW_HEIGHT; y++)
         {
-            const int      pixelOffset = y*pitch + x*sizeof(Uint32);
-            Uint32 * const pixel = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
+            for (int x = 0; x < WINDOW_WIDTH; x++)
+            {
+                const int      pixelOffset = y*pitch + x*sizeof(Uint32);
+                Uint32 * const pixel = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
 
-            const Uint8 r = static_cast<char>((static_cast<float>(y)/WINDOW_HEIGHT) * 0xFF);
-            const Uint8 g = 0x80;
-            const Uint8 b = static_cast<char>((static_cast<float>(x)/WINDOW_WIDTH) * 0xFF);
+                const Uint8 r = static_cast<char>((static_cast<float>(y)/WINDOW_HEIGHT) * 0xFF);
+                const Uint8 g = 0x0;
+                const Uint8 b = static_cast<char>(windowMatrix(y, x) * 0xFF);
 
-            *pixel = 0xFF000000
-                | (r << 16)
-                | (g << 8)
-                | (b << 0);
+                *pixel = 0xFF000000
+                    | (r << 16)
+                    | (g << 8)
+                    | (b << 0);
+            }
         }
+
+        SDL_UnlockTexture(streamingTexture.get());
+
+        SDL_RenderCopy(renderer.get(), streamingTexture.get(), nullptr, nullptr);
+        SDL_RenderPresent(renderer.get());
     }
-
-    SDL_UnlockTexture(streamingTexture.get());
-
-    SDL_RenderCopy(renderer.get(), streamingTexture.get(), nullptr, nullptr);
-    SDL_RenderPresent(renderer.get());
-
-    sdl2utils::waitEscOrCrossPressed();
 
     return 0;
 }
