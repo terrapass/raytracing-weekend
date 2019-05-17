@@ -1,5 +1,8 @@
-# CMake build directory
+# CMake build directories
 /build/
+/build-win/
+/release/
+/release-win/
 
 # Editor-generated temporary files
 *.*~
