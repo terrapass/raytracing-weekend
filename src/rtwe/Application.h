@@ -54,4 +54,4 @@ private: // Members
 
 } // namespace rtwe
 
-#endif
+#endif // RTWE_APPLICATION_H
