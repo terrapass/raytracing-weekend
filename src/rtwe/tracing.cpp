@@ -4,18 +4,14 @@ namespace rtwe
 {
 
 //
-// Constants
-//
-
-const Color BACKGROUND_COLOR_TOP    = Color::CYAN;
-const Color BACKGROUND_COLOR_BOTTOM = Color::YELLOW;
-
-//
 // Utilities
 //
 
 Color GetMissedRayColor(const Ray & ray)
 {
+    static const Color BACKGROUND_COLOR_BOTTOM = Color::YELLOW;
+    static const Color BACKGROUND_COLOR_TOP    = Color::CYAN;
+
     return LerpColor(
         BACKGROUND_COLOR_BOTTOM,
         BACKGROUND_COLOR_TOP,

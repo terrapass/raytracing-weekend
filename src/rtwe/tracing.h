@@ -9,13 +9,6 @@ namespace rtwe
 {
 
 //
-// Constants
-//
-
-extern const Color BACKGROUND_COLOR_TOP;
-extern const Color BACKGROUND_COLOR_BOTTOM;
-
-//
 // Utilities
 //
 
