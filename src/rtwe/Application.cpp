@@ -6,7 +6,7 @@
 #include <sdl2utils/event_utils.h>
 #include <sdl2utils/guards.h>
 
-#include <Eigen/Dense>
+#include "tracing.h"
 
 namespace rtwe
 {
@@ -17,6 +17,9 @@ namespace rtwe
 
 const int Application::WINDOW_WIDTH  = 800;
 const int Application::WINDOW_HEIGHT = 600;
+
+const float Application::WINDOW_ASPECT_RATIO =
+    static_cast<float>(Application::WINDOW_WIDTH)/static_cast<float>(Application::WINDOW_HEIGHT);
 
 const char * const Application::WINDOW_TITLE = "Ray Tracing Weekend";
 
@@ -51,36 +54,39 @@ int Application::run()
     void * pixels = nullptr;
     int    pitch  = -1;
 
-    while (!sdl2utils::escOrCrossPressed())
+    const int lockResult = SDL_LockTexture(streamingTexture.get(), nullptr, &pixels, &pitch);
+    assert(lockResult == 0 && "SDL_LockTexture() must succeed");
+
+    static const float PROJECTION_HEIGHT = 2.0f;
+    static const float PROJECTION_WIDTH  = PROJECTION_HEIGHT * WINDOW_ASPECT_RATIO;
+
+    // The following code uses a left-handed coordinate system:
+    // x points right, y points up, z points into the screen.
+
+    const Vector3 raytracingOrigin      (0.0f, 0.0f, 0.0f);
+    const Vector3 raytracingScreenCenter(0.0f, 0.0f, 1.0f);
+
+    for (int y = 0; y < WINDOW_HEIGHT; y++)
     {
-        const int lockResult = SDL_LockTexture(streamingTexture.get(), nullptr, &pixels, &pitch);
-        assert(lockResult == 0 && "SDL_LockTexture() must succeed");
-
-        const auto windowMatrix = Eigen::Matrix<float, WINDOW_HEIGHT, WINDOW_WIDTH>::Random();
-
-        for (int y = 0; y < WINDOW_HEIGHT; y++)
+        for (int x = 0; x < WINDOW_WIDTH; x++)
         {
-            for (int x = 0; x < WINDOW_WIDTH; x++)
-            {
-                const int      pixelOffset = y*pitch + x*sizeof(Uint32);
-                Uint32 * const pixel = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
+            const int      pixelOffset = y*pitch + x*sizeof(Uint32);
+            Uint32 * const pixel = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
 
-                const Uint8 r = static_cast<char>((static_cast<float>(y)/WINDOW_HEIGHT) * 0xFF);
-                const Uint8 g = 0x0;
-                const Uint8 b = static_cast<char>(windowMatrix(y, x) * 0xFF);
+            const Vector3 raytracingDirection(0.0f, 0.0f, 1.0f); // TODO: Calculate properly
 
-                *pixel = 0xFF000000
-                    | (r << 16)
-                    | (g << 8)
-                    | (b << 0);
-            }
+            const Ray ray(raytracingOrigin, raytracingDirection);
+
+            *pixel = GetMissedRayColor(ray).ToArgb();
         }
-
-        SDL_UnlockTexture(streamingTexture.get());
-
-        SDL_RenderCopy(renderer.get(), streamingTexture.get(), nullptr, nullptr);
-        SDL_RenderPresent(renderer.get());
     }
+
+    SDL_UnlockTexture(streamingTexture.get());
+
+    SDL_RenderCopy(renderer.get(), streamingTexture.get(), nullptr, nullptr);
+    SDL_RenderPresent(renderer.get());
+
+    sdl2utils::waitEscOrCrossPressed();
 
     return 0;
 }

@@ -42,6 +42,8 @@ private: // Constants
     static const int WINDOW_WIDTH;
     static const int WINDOW_HEIGHT;
 
+    static const float WINDOW_ASPECT_RATIO;
+
     static const char * const WINDOW_TITLE;
 
     static const int    SDL_INIT_FLAGS;

@@ -45,6 +45,17 @@ private: // Service
 };
 
 //
+// Utilities
+//
+
+inline Color LerpColor(const Color & color0, const Color & color1, const float amount)
+{
+    return Color(
+        color0.Rgb + amount*(color1.Rgb - color0.Rgb)
+    );
+}
+
+//
 // Construction
 //
 
@@ -99,4 +110,4 @@ inline Uint8 Color::ToColorComponent(const float value)
 
 }
 
-#endif
+#endif // RTWE_COLOR_H
