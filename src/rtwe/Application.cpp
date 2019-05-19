@@ -71,11 +71,19 @@ int Application::run()
         for (int x = 0; x < WINDOW_WIDTH; x++)
         {
             const int      pixelOffset = y*pitch + x*sizeof(Uint32);
-            Uint32 * const pixel = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
+            Uint32 * const pixel       = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
 
-            const Vector3 raytracingDirection(0.0f, 0.0f, 1.0f); // TODO: Calculate properly
+            const float normalizedPixelX = static_cast<float>(x)/static_cast<float>(WINDOW_WIDTH);
+            const float normalizedPixelY = static_cast<float>(y)/static_cast<float>(WINDOW_HEIGHT);
 
-            const Ray ray(raytracingOrigin, raytracingDirection);
+            Vector3 raytracingTarget = raytracingScreenCenter;
+            raytracingTarget.x() += PROJECTION_WIDTH  * (normalizedPixelX - 0.5f);
+            raytracingTarget.y() += PROJECTION_HEIGHT * (normalizedPixelY - 0.5f);
+
+            const Ray ray(
+                raytracingOrigin,
+                raytracingTarget - raytracingOrigin
+            );
 
             *pixel = GetMissedRayColor(ray).ToArgb();
         }
