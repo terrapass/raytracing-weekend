@@ -40,6 +40,8 @@ Application::Application():
 // Interface
 //
 
+static inline Color RawNormalToColor(const Vector3 & rawNormal);
+
 int Application::run()
 {
     const sdl2utils::SDL_WindowPtr window = createWindow();
@@ -88,11 +90,10 @@ int Application::run()
                 raytracingTarget - raytracingOrigin
             );
 
-            const Color pixelColor = DoesRayHitSphere(ray, OBJECT_SPHERE_CENTER, OBJECT_SPHERE_RADIUS)
-                ? Color::RED
-                : GetMissedRayColor(ray);
-
-            *pixel = pixelColor.ToArgb();
+            if (std::optional<RayHit> rayHit = TryRayHitSphere(ray, OBJECT_SPHERE_CENTER, OBJECT_SPHERE_RADIUS))
+                *pixel = RawNormalToColor(rayHit->RawNormal).ToArgb();
+            else
+                *pixel = GetMissedRayColor(ray).ToArgb();
         }
     }
 
@@ -109,6 +110,14 @@ int Application::run()
 //
 // Service
 //
+
+static inline Color RawNormalToColor(const Vector3 & rawNormal)
+{
+    const Vector3 normal            = rawNormal.normalized();
+    const Vector3 nonNegativeNormal = 0.5f*(normal + Vector3(1.0f, 1.0f, 1.0f));
+
+    return Color(nonNegativeNormal);
+}
 
 sdl2utils::SDL_WindowPtr Application::createWindow()
 {

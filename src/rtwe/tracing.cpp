@@ -21,7 +21,27 @@ Color GetMissedRayColor(const Ray & ray)
     );
 }
 
-bool DoesRayHitSphere(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius)
+static inline std::optional<float> TryRayHitSphereImpl(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius);
+
+std::optional<RayHit> TryRayHitSphere(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius)
+{
+    const std::optional<float> rayHitParam = TryRayHitSphereImpl(ray, sphereCenter, sphereRadius);
+
+    if (!rayHitParam.has_value())
+        return std::nullopt;
+
+    RayHit rayHit;
+    rayHit.Hitpoint  = ray.GetPointAtParameter(*rayHitParam);
+    rayHit.RawNormal = rayHit.Hitpoint - sphereCenter;
+
+    return rayHit;
+}
+
+//
+// Service
+//
+
+static inline std::optional<float> TryRayHitSphereImpl(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius)
 {
     const Vector3 vectorFromShereCenter = ray.Origin - sphereCenter;
 
@@ -31,7 +51,10 @@ bool DoesRayHitSphere(const Ray & ray, const Vector3 & sphereCenter, const float
         vectorFromShereCenter.dot(vectorFromShereCenter) - sphereRadius*sphereRadius
     );
 
-    return solutions.has_value();
+    if (!solutions.has_value())
+        return std::nullopt;
+
+    return solutions->first;
 }
 
 }
