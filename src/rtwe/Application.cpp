@@ -60,6 +60,9 @@ int Application::run()
     static const float PROJECTION_HEIGHT = 2.0f;
     static const float PROJECTION_WIDTH  = PROJECTION_HEIGHT * WINDOW_ASPECT_RATIO;
 
+    static const Vector3 OBJECT_SPHERE_CENTER(0.0f, 0.0f, 1.0f);
+    static const float   OBJECT_SPHERE_RADIUS(0.5f);
+
     // The following code uses a left-handed coordinate system:
     // x points right, y points up, z points into the screen.
 
@@ -85,7 +88,11 @@ int Application::run()
                 raytracingTarget - raytracingOrigin
             );
 
-            *pixel = GetMissedRayColor(ray).ToArgb();
+            const Color pixelColor = DoesRayHitSphere(ray, OBJECT_SPHERE_CENTER, OBJECT_SPHERE_RADIUS)
+                ? Color::RED
+                : GetMissedRayColor(ray);
+
+            *pixel = pixelColor.ToArgb();
         }
     }
 

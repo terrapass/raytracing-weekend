@@ -14,6 +14,8 @@ namespace rtwe
 
 Color GetMissedRayColor(const Ray & ray);
 
+bool DoesRayHitSphere(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius);
+
 }
 
 #endif // RTWE_TRACING_H
