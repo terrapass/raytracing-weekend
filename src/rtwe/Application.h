@@ -4,12 +4,18 @@
 #include <sdl2utils/raii.h>
 #include <sdl2utils/pointers.h>
 
-//
-//
-//
-
 namespace rtwe
 {
+
+//
+// Forward declarations
+//
+
+struct IRayTarget;
+
+//
+//
+//
 
 class Application final
 {
@@ -36,6 +42,8 @@ private: // Service
     static sdl2utils::SDL_RendererPtr createRenderer(SDL_Window * const pWindow);
 
     static sdl2utils::SDL_TexturePtr createStreamingTexture(SDL_Renderer * const pRenderer);
+
+    static std::unique_ptr<IRayTarget> createRaytracingScene();
 
 private: // Constants
 

@@ -14,6 +14,7 @@ namespace rtwe
 
 struct RayHit final
 {
+    float   RayParam;
     Vector3 Hitpoint;
     Vector3 RawNormal;
 };

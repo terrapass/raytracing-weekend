@@ -31,6 +31,7 @@ std::optional<RayHit> TryRayHitSphere(const Ray & ray, const Vector3 & sphereCen
         return std::nullopt;
 
     RayHit rayHit;
+    rayHit.RayParam  = rayHitParam.value();
     rayHit.Hitpoint  = ray.GetPointAtParameter(*rayHitParam);
     rayHit.RawNormal = rayHit.Hitpoint - sphereCenter;
 
@@ -43,12 +44,12 @@ std::optional<RayHit> TryRayHitSphere(const Ray & ray, const Vector3 & sphereCen
 
 static inline std::optional<float> TryRayHitSphereImpl(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius)
 {
-    const Vector3 vectorFromShereCenter = ray.Origin - sphereCenter;
+    const Vector3 vectorToSphereCenter = sphereCenter - ray.Origin;
 
     const auto solutions = solveQuadraticEquation(
         ray.Direction.dot(ray.Direction),
-        2.0f*(ray.Direction.dot(vectorFromShereCenter)),
-        vectorFromShereCenter.dot(vectorFromShereCenter) - sphereRadius*sphereRadius
+        2.0f*(ray.Direction.dot(vectorToSphereCenter)),
+        vectorToSphereCenter.dot(vectorToSphereCenter) - sphereRadius*sphereRadius
     );
 
     if (!solutions.has_value())

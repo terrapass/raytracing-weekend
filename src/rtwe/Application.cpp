@@ -7,6 +7,7 @@
 #include <sdl2utils/guards.h>
 
 #include "tracing.h"
+#include "targets.h"
 
 namespace rtwe
 {
@@ -53,6 +54,9 @@ int Application::run()
     const sdl2utils::SDL_TexturePtr streamingTexture = createStreamingTexture(renderer.get());
     assert(streamingTexture);
 
+    const std::unique_ptr<IRayTarget> raytracingScene = createRaytracingScene();
+    assert(raytracingScene);
+
     void * pixels = nullptr;
     int    pitch  = -1;
 
@@ -61,9 +65,6 @@ int Application::run()
 
     static const float PROJECTION_HEIGHT = 2.0f;
     static const float PROJECTION_WIDTH  = PROJECTION_HEIGHT * WINDOW_ASPECT_RATIO;
-
-    static const Vector3 OBJECT_SPHERE_CENTER(0.0f, 0.0f, 1.0f);
-    static const float   OBJECT_SPHERE_RADIUS(0.5f);
 
     // The following code uses a left-handed coordinate system:
     // x points right, y points up, z points into the screen.
@@ -90,10 +91,10 @@ int Application::run()
                 raytracingTarget - raytracingOrigin
             );
 
-            if (std::optional<RayHit> rayHit = TryRayHitSphere(ray, OBJECT_SPHERE_CENTER, OBJECT_SPHERE_RADIUS))
+            if (std::optional<RayHit> rayHit = raytracingScene->TryHit(ray, 0.0f, std::numeric_limits<float>::infinity()))
                 *pixel = RawNormalToColor(rayHit->RawNormal).ToArgb();
             else
-                *pixel = GetMissedRayColor(ray).ToArgb();
+                *pixel = Color::MAGENTA.ToArgb();
         }
     }
 
@@ -175,6 +176,18 @@ sdl2utils::SDL_TexturePtr Application::createStreamingTexture(SDL_Renderer * con
             SDL_CreateTexture(pRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, WINDOW_WIDTH, WINDOW_HEIGHT),
             "result of SDL_CreateTexture()"
         )
+    );
+}
+
+std::unique_ptr<IRayTarget> Application::createRaytracingScene()
+{
+    return std::make_unique<CompositeRayTarget>(
+        std::initializer_list<std::shared_ptr<IRayTarget>>{
+            //std::make_shared<SkyboxGradientRayTarget>(Color::WHITE, Color::BLUE),
+            //std::make_shared<PlaneRayTarget>(Vector3(0.0f, -0.5f, 0.0f), Vector3(0.0f, 1.0f, 0.0f)),
+            std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),
+            std::make_shared<SphereRayTarget>(Vector3(0.0f, -5.5f, 1.0f), 5.0f)
+        }
     );
 }
 

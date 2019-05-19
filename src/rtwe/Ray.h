@@ -22,6 +22,8 @@ public: // Construction
 public: // Interface
 
     inline Vector3 GetPointAtParameter(const float param) const;
+
+    inline float GetSquaredDistanceAtParameter(const float param) const;
 };
 
 //
@@ -42,6 +44,11 @@ inline Ray::Ray(Vector3 origin, Vector3 direction):
 inline Vector3 Ray::GetPointAtParameter(const float param) const
 {
     return Origin + param*Direction;
+}
+
+inline float Ray::GetSquaredDistanceAtParameter(const float param) const
+{
+    return (param*Direction).squaredNorm();
 }
 
 } // namespace rtwe
