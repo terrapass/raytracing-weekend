@@ -79,7 +79,7 @@ int Application::run()
             Uint32 * const pixel       = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
 
             const float normalizedPixelX = static_cast<float>(x)/static_cast<float>(WINDOW_WIDTH);
-            const float normalizedPixelY = static_cast<float>(y)/static_cast<float>(WINDOW_HEIGHT);
+            const float normalizedPixelY = 1.0f - static_cast<float>(y)/static_cast<float>(WINDOW_HEIGHT);
 
             Vector3 raytracingTarget = raytracingScreenCenter;
             raytracingTarget.x() += PROJECTION_WIDTH  * (normalizedPixelX - 0.5f);
