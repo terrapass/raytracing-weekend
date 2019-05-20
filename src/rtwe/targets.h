@@ -126,14 +126,6 @@ public: // IRayTarget
         const float maxRayParam
     ) const override;
 
-private: // Service
-
-    bool CanHit(
-        const Ray & ray,
-        const float minRayParam,
-        const float maxRayParam
-    ) const;
-
 private: // Members
 
     const Vector3 m_Center;

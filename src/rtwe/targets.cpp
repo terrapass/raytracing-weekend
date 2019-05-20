@@ -38,7 +38,7 @@ std::optional<RayHit> CompositeRayTarget::TryHit(
 
         if (std::optional<RayHit> targetHit = target->TryHit(ray, minRayParam, currentMaxRayParam))
         {
-            assert(targetHit->RayParam < currentMaxRayParam);
+            assert(targetHit->RayParam <= currentMaxRayParam);
 
             currentMaxRayParam = targetHit->RayParam;
             result             = std::move(targetHit);
@@ -56,7 +56,37 @@ std::optional<RayHit> CompositeRayTarget::TryHit(
 // SkyboxGradientRayTarget
 //
 
-// TODO
+//
+// Construction
+//
+
+SkyboxGradientRayTarget::SkyboxGradientRayTarget(Color bottomColor, Color topColor):
+    m_BottomColor(std::move(bottomColor)),
+    m_TopColor   (std::move(topColor))
+{
+    // Empty
+}
+
+//
+// IRayTarget
+//
+
+std::optional<RayHit> SkyboxGradientRayTarget::TryHit(
+    const Ray & ray,
+    const float /*minRayParam*/,
+    const float maxRayParam
+) const
+{
+    if (maxRayParam < INFINITY)
+        return {};
+
+    RayHit rayHit;
+    rayHit.RayParam  = INFINITY;
+    rayHit.Hitpoint  = ray.GetPointAtParameter(INFINITY);
+    rayHit.RawNormal = -ray.Direction;
+
+    return rayHit;
+}
 
 //
 //

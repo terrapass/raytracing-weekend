@@ -91,7 +91,7 @@ int Application::run()
                 raytracingTarget - raytracingOrigin
             );
 
-            if (std::optional<RayHit> rayHit = raytracingScene->TryHit(ray, 0.0f, std::numeric_limits<float>::infinity()))
+            if (std::optional<RayHit> rayHit = raytracingScene->TryHit(ray, 0.0f, INFINITY))
                 *pixel = RawNormalToColor(rayHit->RawNormal).ToArgb();
             else
                 *pixel = Color::MAGENTA.ToArgb();
@@ -183,10 +183,9 @@ std::unique_ptr<IRayTarget> Application::createRaytracingScene()
 {
     return std::make_unique<CompositeRayTarget>(
         std::initializer_list<std::shared_ptr<IRayTarget>>{
-            //std::make_shared<SkyboxGradientRayTarget>(Color::WHITE, Color::BLUE),
+            std::make_shared<SkyboxGradientRayTarget>(Color::WHITE, Color::BLUE),
             //std::make_shared<PlaneRayTarget>(Vector3(0.0f, -0.5f, 0.0f), Vector3(0.0f, 1.0f, 0.0f)),
-            std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),
-            std::make_shared<SphereRayTarget>(Vector3(0.0f, -5.5f, 1.0f), 5.0f)
+            std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f)
         }
     );
 }
