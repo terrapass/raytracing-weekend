@@ -27,6 +27,8 @@ Color GetVerticalGradientColor(const Ray & ray, const Color & bottomColor, const
 
 std::optional<RayHit> TryRayHitSphere(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius);
 
+std::optional<RayHit> TryRayHitPlane(const Ray & ray, const Vector3 & planePoint, const Vector3 & planeNormal);
+
 }
 
 #endif // RTWE_TRACING_H

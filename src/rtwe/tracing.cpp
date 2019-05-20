@@ -1,5 +1,6 @@
 #include "tracing.h"
 
+#include "constants.h"
 #include "math_utils.h"
 
 namespace rtwe
@@ -35,6 +36,23 @@ std::optional<RayHit> TryRayHitSphere(const Ray & ray, const Vector3 & sphereCen
     return rayHit;
 }
 
+static inline std::optional<float> TryRayHitPlaneImpl(const Ray & ray, const Vector3 & planePoint, const Vector3 & planeNormal);
+
+std::optional<RayHit> TryRayHitPlane(const Ray & ray, const Vector3 & planePoint, const Vector3 & planeNormal)
+{
+    const std::optional<float> rayHitParam = TryRayHitPlaneImpl(ray, planePoint, planeNormal);
+
+    if (!rayHitParam.has_value())
+        return std::nullopt;
+
+    RayHit rayHit;
+    rayHit.RayParam  = rayHitParam.value();
+    rayHit.Hitpoint  = ray.GetPointAtParameter(*rayHitParam);
+    rayHit.RawNormal = planeNormal;
+
+    return rayHit;
+}
+
 //
 // Service
 //
@@ -53,6 +71,19 @@ static inline std::optional<float> TryRayHitSphereImpl(const Ray & ray, const Ve
         return std::nullopt;
 
     return solutions->first;
+}
+
+static inline std::optional<float> TryRayHitPlaneImpl(const Ray & ray, const Vector3 & planePoint, const Vector3 & planeNormal)
+{
+    const float denominator = ray.Direction.dot(planeNormal);
+
+    // If the ray is parallel to the plane
+    if (std::fabs(denominator) < EPSILON)
+        return {};
+
+    const float numerator = (planePoint - ray.Origin).dot(planeNormal);
+
+    return (numerator/denominator);
 }
 
 }

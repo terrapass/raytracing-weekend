@@ -125,7 +125,34 @@ std::optional<RayHit> SphereRayTarget::TryHit(
 // PlaneRayTarget
 //
 
-// TODO
+//
+// Construction
+//
+
+PlaneRayTarget::PlaneRayTarget(Vector3 point, Vector3 normal):
+    m_Point (std::move(point)),
+    m_Normal(std::move(normal))
+{
+    // Empty
+}
+
+//
+// IRayTarget
+//
+
+std::optional<RayHit> PlaneRayTarget::TryHit(
+    const Ray & ray,
+    const float minRayParam,
+    const float maxRayParam
+) const
+{
+    std::optional<RayHit> rayHit = TryRayHitPlane(ray, m_Point, m_Normal);
+
+    if (!rayHit.has_value() || rayHit->RayParam < minRayParam || rayHit->RayParam > maxRayParam)
+        return std::nullopt;
+
+    return rayHit;
+}
 
 //
 //
