@@ -9,14 +9,11 @@ namespace rtwe
 // Utilities
 //
 
-Color GetMissedRayColor(const Ray & ray)
+Color GetVerticalGradientColor(const Ray & ray, const Color & bottomColor, const Color & topColor)
 {
-    static const Color BACKGROUND_COLOR_BOTTOM = Color::YELLOW;
-    static const Color BACKGROUND_COLOR_TOP    = Color::CYAN;
-
     return LerpColor(
-        BACKGROUND_COLOR_BOTTOM,
-        BACKGROUND_COLOR_TOP,
+        bottomColor,
+        topColor,
         0.5f + 0.5f*ray.Direction.normalized().y()
     );
 }

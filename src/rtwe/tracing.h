@@ -23,7 +23,7 @@ struct RayHit final
 // Utilities
 //
 
-Color GetMissedRayColor(const Ray & ray);
+Color GetVerticalGradientColor(const Ray & ray, const Color & bottomColor, const Color & topColor);
 
 std::optional<RayHit> TryRayHitSphere(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius);
 
