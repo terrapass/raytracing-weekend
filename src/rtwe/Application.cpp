@@ -42,6 +42,7 @@ Application::Application():
 // Interface
 //
 
+static inline float GetRandomValue();
 static inline Color RawNormalToColor(const Vector3 & rawNormal);
 
 int Application::run()
@@ -67,6 +68,8 @@ int Application::run()
     static const float PROJECTION_HEIGHT = 2.0f;
     static const float PROJECTION_WIDTH  = PROJECTION_HEIGHT * WINDOW_ASPECT_RATIO;
 
+    static const int SAMPLES_PER_PIXEL = 8;
+
     // The following code uses a left-handed coordinate system:
     // x points right, y points up, z points into the screen.
 
@@ -87,15 +90,27 @@ int Application::run()
             const int      pixelOffset = y*pitch + x*sizeof(Uint32);
             Uint32 * const pixel       = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
 
-            const float normalizedPixelX = static_cast<float>(x)/static_cast<float>(WINDOW_WIDTH);
-            const float normalizedPixelY = 1.0f - static_cast<float>(y)/static_cast<float>(WINDOW_HEIGHT);
+            Vector3 accumulatedRawNormal = Vector3::Zero();
 
-            const Ray ray = camera.CreateRay(normalizedPixelX, normalizedPixelY);
+            for (int sampleIdx = 0; sampleIdx < SAMPLES_PER_PIXEL; sampleIdx++)
+            {
+                const float sampleX = (static_cast<float>(x) + GetRandomValue() - 0.5f);
+                const float sampleY = (static_cast<float>(y) + GetRandomValue() - 0.5f);
 
-            if (std::optional<RayHit> rayHit = raytracingScene->TryHit(ray, 0.0f, INFINITY))
-                *pixel = RawNormalToColor(rayHit->RawNormal).ToArgb();
-            else
-                *pixel = Color::MAGENTA.ToArgb();
+                const float normalizedSampleX = sampleX/static_cast<float>(WINDOW_WIDTH);
+                const float normalizedSampleY = 1.0f - sampleY/static_cast<float>(WINDOW_HEIGHT);
+
+                const Ray ray = camera.CreateRay(normalizedSampleX, normalizedSampleY);
+
+                const std::optional<RayHit> rayHit = raytracingScene->TryHit(ray, 0.0f, INFINITY);
+                assert(rayHit.has_value());
+
+                accumulatedRawNormal += rayHit->RawNormal;
+            }
+
+            const Vector3 averageRawNormal = accumulatedRawNormal/static_cast<float>(SAMPLES_PER_PIXEL);
+
+            *pixel = RawNormalToColor(averageRawNormal).ToArgb();
         }
     }
 
@@ -112,6 +127,11 @@ int Application::run()
 //
 // Service
 //
+
+static inline float GetRandomValue()
+{
+    return drand48(); // TODO: Replace with a call to C++ API
+}
 
 static inline Color RawNormalToColor(const Vector3 & rawNormal)
 {
