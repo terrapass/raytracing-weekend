@@ -8,6 +8,7 @@
 
 #include "tracing.h"
 #include "targets.h"
+#include "Camera.h"
 
 namespace rtwe
 {
@@ -69,8 +70,15 @@ int Application::run()
     // The following code uses a left-handed coordinate system:
     // x points right, y points up, z points into the screen.
 
-    const Vector3 raytracingOrigin      (0.0f, 0.0f, 0.0f);
-    const Vector3 raytracingScreenCenter(0.0f, 0.0f, 1.0f);
+    static const Vector3 CAMERA_ORIGIN    (0.0f, 0.0f, 0.0f);
+    static const Vector3 PROJECTION_CENTER(0.0f, 0.0f, 1.0f);
+
+    const Camera camera(
+        CAMERA_ORIGIN,
+        PROJECTION_CENTER,
+        PROJECTION_WIDTH,
+        PROJECTION_HEIGHT
+    );
 
     for (int y = 0; y < WINDOW_HEIGHT; y++)
     {
@@ -82,14 +90,7 @@ int Application::run()
             const float normalizedPixelX = static_cast<float>(x)/static_cast<float>(WINDOW_WIDTH);
             const float normalizedPixelY = 1.0f - static_cast<float>(y)/static_cast<float>(WINDOW_HEIGHT);
 
-            Vector3 raytracingTarget = raytracingScreenCenter;
-            raytracingTarget.x() += PROJECTION_WIDTH  * (normalizedPixelX - 0.5f);
-            raytracingTarget.y() += PROJECTION_HEIGHT * (normalizedPixelY - 0.5f);
-
-            const Ray ray(
-                raytracingOrigin,
-                raytracingTarget - raytracingOrigin
-            );
+            const Ray ray = camera.CreateRay(normalizedPixelX, normalizedPixelY);
 
             if (std::optional<RayHit> rayHit = raytracingScene->TryHit(ray, 0.0f, INFINITY))
                 *pixel = RawNormalToColor(rayHit->RawNormal).ToArgb();
