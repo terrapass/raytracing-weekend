@@ -6,6 +6,7 @@
 #include <sdl2utils/event_utils.h>
 #include <sdl2utils/guards.h>
 
+#include "constants.h"
 #include "tracing.h"
 #include "targets.h"
 #include "Camera.h"
@@ -68,7 +69,9 @@ int Application::run()
     static const float PROJECTION_HEIGHT = 2.0f;
     static const float PROJECTION_WIDTH  = PROJECTION_HEIGHT * WINDOW_ASPECT_RATIO;
 
-    static const int SAMPLES_PER_PIXEL = 8;
+    static const int SAMPLES_PER_PIXEL = IS_RELEASE
+        ? 128
+        : 1;
 
     // The following code uses a left-handed coordinate system:
     // x points right, y points up, z points into the screen.
