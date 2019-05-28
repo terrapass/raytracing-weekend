@@ -1,6 +1,8 @@
 #ifndef RTWE_APPLICATION_H
 #define RTWE_APPLICATION_H
 
+#include <vector>
+
 #include <sdl2utils/raii.h>
 #include <sdl2utils/pointers.h>
 
@@ -11,7 +13,7 @@ namespace rtwe
 // Forward declarations
 //
 
-struct IRayTarget;
+struct Body;
 
 //
 //
@@ -43,7 +45,7 @@ private: // Service
 
     static sdl2utils::SDL_TexturePtr createStreamingTexture(SDL_Renderer * const pRenderer);
 
-    static std::unique_ptr<IRayTarget> createRaytracingScene();
+    static std::vector<Body> createRaytracingScene();
 
 private: // Constants
 

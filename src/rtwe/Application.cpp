@@ -57,8 +57,7 @@ int Application::run()
     const sdl2utils::SDL_TexturePtr streamingTexture = createStreamingTexture(renderer.get());
     assert(streamingTexture);
 
-    const std::unique_ptr<IRayTarget> raytracingScene = createRaytracingScene();
-    assert(raytracingScene);
+    const std::vector<Body> raytracingScene = createRaytracingScene();
 
     void * pixels = nullptr;
     int    pitch  = -1;
@@ -93,7 +92,7 @@ int Application::run()
             const int      pixelOffset = y*pitch + x*sizeof(Uint32);
             Uint32 * const pixel       = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
 
-            Vector3 accumulatedRawNormal = Vector3::Zero();
+            Vector3 accumulatedRgb = Vector3::Zero();
 
             for (int sampleIdx = 0; sampleIdx < SAMPLES_PER_PIXEL; sampleIdx++)
             {
@@ -105,15 +104,14 @@ int Application::run()
 
                 const Ray ray = camera.CreateRay(normalizedSampleX, normalizedSampleY);
 
-                const std::optional<RayHit> rayHit = raytracingScene->TryHit(ray, 0.0f, INFINITY);
-                assert(rayHit.has_value());
+                const Color rayColor = TraceRayWithDefaultColor(raytracingScene, ray, MISSED_RAY_COLOR);
 
-                accumulatedRawNormal += rayHit->RawNormal;
+                accumulatedRgb += rayColor.Rgb;
             }
 
-            const Vector3 averageRawNormal = accumulatedRawNormal/static_cast<float>(SAMPLES_PER_PIXEL);
+            Vector3 averageRgb = accumulatedRgb/static_cast<float>(SAMPLES_PER_PIXEL);
 
-            *pixel = RawNormalToColor(averageRawNormal).ToArgb();
+            *pixel = Color(std::move(averageRgb)).ToArgb();
         }
     }
 
@@ -203,15 +201,12 @@ sdl2utils::SDL_TexturePtr Application::createStreamingTexture(SDL_Renderer * con
     );
 }
 
-std::unique_ptr<IRayTarget> Application::createRaytracingScene()
+std::vector<Body> Application::createRaytracingScene()
 {
-    return std::make_unique<CompositeRayTarget>(
-        std::initializer_list<std::shared_ptr<IRayTarget>>{
-            std::make_shared<SkyboxGradientRayTarget>(Color::WHITE, Color::BLUE),
-            std::make_shared<PlaneRayTarget>(Vector3(0.0f, -0.5f, 0.0f), Vector3(0.0f, 1.0f, 0.0f)),
-            std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f)
-        }
-    );
+    return {
+        {std::make_shared<PlaneRayTarget>(Vector3(0.0f, -0.5f, 0.0f), Vector3(0.0f, 1.0f, 0.0f)), {Color(0.75f, 0.75f, 0.75f)}},
+        {std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),                      {Color(0.85f, 0.4f,  0.4f)}}
+    };
 }
 
 } // namespace rtwe
