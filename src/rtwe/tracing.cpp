@@ -32,11 +32,16 @@ struct ScatteredRay
 // Utilities
 //
 
-static inline std::optional<Color> TryRayTraceImpl(const std::vector<Body> & bodies, const Ray & ray, const int depth);
+static inline Color TraceRayImpl(
+    const std::vector<Body> & bodies,
+    const Ray &               ray,
+    const RayMissFunction &   rayMissFunction,
+    const int                 depth
+);
 
-std::optional<Color> TryTraceRay(const std::vector<Body> & bodies, const Ray & ray)
+Color TraceRay(const std::vector<Body> & bodies, const Ray & ray, const RayMissFunction & rayMissFunction)
 {
-    return TryRayTraceImpl(bodies, ray, 0);
+    return TraceRayImpl(bodies, ray, rayMissFunction, 0);
 }
 
 Color GetVerticalGradientColor(const Ray & ray, const Color & bottomColor, const Color & topColor)
@@ -113,10 +118,15 @@ static inline float GetRayHitSqrDistance(const Vector3 rayOrigin, const std::opt
         : INFINITY;
 }
 
-static inline std::optional<Color> TryRayTraceImpl(const std::vector<Body> & bodies, const Ray & ray, const int depth)
+static inline Color TraceRayImpl(
+    const std::vector<Body> & bodies,
+    const Ray &               ray,
+    const RayMissFunction &   rayMissFunction,
+    const int                 depth
+)
 {
     if (bodies.empty() || depth >= MAX_RAY_TRACE_DEPTH)
-        return std::nullopt;
+        return rayMissFunction(ray);
 
     // TODO: Optimize; add opportunity for early exit if there's no posibility to hit something closer (see CompositeRayTarget)
 
@@ -141,7 +151,7 @@ static inline std::optional<Color> TryRayTraceImpl(const std::vector<Body> & bod
     assert(closestRayHitIt != rayHits.cend());
 
     if (!closestRayHitIt->has_value())
-        return std::nullopt;
+        return rayMissFunction(ray);
 
     const size_t   closestRayHitIndex = closestRayHitIt - rayHits.cbegin();
     const size_t   closestBodyIndex   = closestRayHitIndex;
@@ -152,7 +162,7 @@ static inline std::optional<Color> TryRayTraceImpl(const std::vector<Body> & bod
     if (!scatteredRay.has_value())
         return Color::BLACK;
 
-    const Color scatteredRayColor = TryRayTraceImpl(bodies, scatteredRay->Ray, depth + 1).value_or(MISSED_RAY_COLOR);
+    const Color scatteredRayColor = TraceRayImpl(bodies, scatteredRay->Ray, rayMissFunction, depth + 1);
 
     return Color(
         scatteredRay->Attenuation.Rgb.x() * scatteredRayColor.Rgb.x(),

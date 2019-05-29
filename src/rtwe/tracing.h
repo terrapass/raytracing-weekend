@@ -45,9 +45,7 @@ using RayMissFunction = std::function<Color(Ray)>;
 // Utilities
 //
 
-std::optional<Color> TryTraceRay(const std::vector<Body> & bodies, const Ray & ray);
-
-inline Color TraceRay(const std::vector<Body> & bodies, const Ray & ray, const RayMissFunction & rayMissFunction);
+Color TraceRay(const std::vector<Body> & bodies, const Ray & ray, const RayMissFunction & rayMissFunction);
 
 inline Color TraceRayWithDefaultColor(const std::vector<Body> & bodies, const Ray & ray, const Color & defaultColor);
 
@@ -61,22 +59,13 @@ std::optional<RayHit> TryRayHitPlane(const Ray & ray, const Vector3 & planePoint
 // Utilities
 //
 
-inline Color TraceRay(const std::vector<Body> & bodies, const Ray & ray, const RayMissFunction & rayMissFunction)
-{
-    std::optional<Color> result = TryTraceRay(bodies, ray);
-    if (result.has_value())
-        return std::move(*result);
-
-    return rayMissFunction(ray);
-}
-
 inline Color TraceRayWithDefaultColor(const std::vector<Body> & bodies, const Ray & ray, const Color & defaultColor)
 {
     const auto getDefaultColor = [&defaultColor](const Ray & /*ray*/) {
         return defaultColor;
     };
 
-    return  TraceRay(bodies, ray, getDefaultColor);
+    return TraceRay(bodies, ray, getDefaultColor);
 }
 
 }
