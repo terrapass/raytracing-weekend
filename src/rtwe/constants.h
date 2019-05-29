@@ -18,6 +18,8 @@ constexpr bool IS_RELEASE = false;
 
 constexpr bool IS_DEBUG = !IS_RELEASE;
 
+constexpr float RAYTRACE_MIN_RAY_PARAM = 0.0001f;
+
 }
 
 #endif

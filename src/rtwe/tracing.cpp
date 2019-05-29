@@ -137,7 +137,7 @@ static inline Color TraceRayImpl(
         bodies.cend(),
         rayHits.begin(),
         [&ray](const Body & body) {
-            return body.RayTarget->TryHit(ray, 0.01f, INFINITY);
+            return body.RayTarget->TryHit(ray, RAYTRACE_MIN_RAY_PARAM, INFINITY);
         }
     );
 
