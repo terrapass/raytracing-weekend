@@ -72,6 +72,9 @@ int Application::run()
         ? 128
         : 1;
 
+    static const Color BACKGROUND_TOP_COLOR   (0.7f, 0.7f, 0.95f);
+    static const Color BACKGROUND_BOTTOM_COLOR(0.9f, 0.9f, 0.9f);
+
     // The following code uses a left-handed coordinate system:
     // x points right, y points up, z points into the screen.
 
@@ -104,7 +107,16 @@ int Application::run()
 
                 const Ray ray = camera.CreateRay(normalizedSampleX, normalizedSampleY);
 
-                const Color rayColor = TraceRayWithDefaultColor(raytracingScene, ray, MISSED_RAY_COLOR);
+                const Color rayColor = TraceRay(
+                    raytracingScene,
+                    ray,
+                    std::bind(
+                        GetVerticalGradientColor,
+                        std::placeholders::_1,
+                        BACKGROUND_BOTTOM_COLOR,
+                        BACKGROUND_TOP_COLOR
+                    )
+                );
 
                 accumulatedRgb += rayColor.Rgb;
             }
@@ -205,7 +217,7 @@ std::vector<Body> Application::createRaytracingScene()
 {
     return {
         {std::make_shared<PlaneRayTarget>(Vector3(0.0f, -0.5f, 0.0f), Vector3(0.0f, 1.0f, 0.0f)), {Color(0.75f, 0.75f, 0.75f)}},
-        {std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),                      {Color(0.85f, 0.4f,  0.4f)}}
+        {std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),                      {Color(0.95f, 0.5f,  0.5f)}}
     };
 }
 

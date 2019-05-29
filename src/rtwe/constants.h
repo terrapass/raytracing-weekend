@@ -3,8 +3,6 @@
 
 #include <limits>
 
-#include "Color.h"
-
 namespace rtwe
 {
 
@@ -19,8 +17,6 @@ constexpr bool IS_RELEASE = false;
 #endif // NDEBUG
 
 constexpr bool IS_DEBUG = !IS_RELEASE;
-
-const Color MISSED_RAY_COLOR(0.7f, 0.7f, 0.9f);
 
 }
 
