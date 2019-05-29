@@ -121,7 +121,7 @@ int Application::run()
                 accumulatedRgb += rayColor.Rgb;
             }
 
-            Vector3 averageRgb = accumulatedRgb/static_cast<float>(SAMPLES_PER_PIXEL);
+            const Vector3 averageRgb = accumulatedRgb/static_cast<float>(SAMPLES_PER_PIXEL);
 
             *pixel = Color(std::move(averageRgb)).ToArgb();
         }
@@ -217,7 +217,9 @@ std::vector<Body> Application::createRaytracingScene()
 {
     return {
         {std::make_shared<PlaneRayTarget>(Vector3(0.0f, -0.5f, 0.0f), Vector3(0.0f, 1.0f, 0.0f)), {Color(0.75f, 0.75f, 0.75f)}},
-        {std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),                      {Color(0.95f, 0.5f,  0.5f)}}
+        {std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),                      {Color(0.95f, 0.5f,  0.5f)}},
+        {std::make_shared<SphereRayTarget>(Vector3(0.75f, -0.25f, 0.75f), 0.25f),                 {Color(0.35f, 0.7f, 0.35f)}},
+        {std::make_shared<SphereRayTarget>(Vector3(-1.25f, 0.25f, 1.5f), 0.75f),                  {Color(0.9f, 0.8f, 0.2f)}}
     };
 }
 
