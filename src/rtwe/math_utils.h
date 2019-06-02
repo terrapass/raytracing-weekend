@@ -3,6 +3,7 @@
 
 #include <optional>
 
+#include "types.h"
 #include "constants.h"
 
 namespace rtwe
@@ -15,6 +16,8 @@ namespace rtwe
 std::optional<std::pair<float, float>> solveQuadraticEquation(const float a, const float b, const float c);
 
 bool isAlmostEqual(const float value0, const float value1, const float epsilon = EPSILON);
+
+Vector3 multiplyElements(const Vector3 & vector0, const Vector3 & vector1);
 
 }
 

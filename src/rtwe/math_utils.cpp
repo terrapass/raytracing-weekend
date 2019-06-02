@@ -27,4 +27,13 @@ bool isAlmostEqual(const float value0, const float value1, const float epsilon)
     return std::abs(value1 - value0) < EPSILON;
 }
 
+Vector3 multiplyElements(const Vector3 & vector0, const Vector3 & vector1)
+{
+    return Vector3(
+        vector0.x() * vector1.x(),
+        vector0.y() * vector1.y(),
+        vector0.z() * vector1.z()
+    );
+}
+
 }

@@ -193,24 +193,68 @@ static inline Color TraceRayImpl(
     if (!closestRayHitIt->has_value())
         return rayMissFunction(ray);
 
-    const size_t   closestRayHitIndex = closestRayHitIt - rayHits.cbegin();
-    const size_t   closestBodyIndex   = closestRayHitIndex;
-    const RayHit & closestRayHit      = closestRayHitIt->value();
-    const Body &   closestBody        = bodies[closestBodyIndex];
+    const size_t     closestRayHitIndex  = closestRayHitIt - rayHits.cbegin();
+    const size_t     closestBodyIndex    = closestRayHitIndex;
+    const RayHit &   closestRayHit       = closestRayHitIt->value();
+    const Body &     closestBody         = bodies[closestBodyIndex];
+    const Material & closestBodyMaterial = closestBody.Material;
 
-    const std::optional<ScatteredRay> scatteredRay = closestBody.Material.IsMetal
-        ? TryScatterMetallic(ray, closestRayHit, closestBody.Material)
-        : TryScatterLambertian(ray, closestRayHit, closestBody.Material);
-    if (!scatteredRay.has_value())
-        return Color::BLACK;
+    Vector3 attenuatedScatteredRgb = Vector3::Zero();
 
-    const Color scatteredRayColor = TraceRayImpl(bodies, scatteredRay->Ray, rayMissFunction, depth + 1);
+    // Lambertian component (if not fully metallic)
+    if (!isAlmostEqual(closestBodyMaterial.Reflectivity, 1.0f))
+    {
+        const std::optional<ScatteredRay> lambertScatteredRay = TryScatterLambertian(
+            ray,
+            closestRayHit,
+            closestBodyMaterial
+        );
 
-    return Color(
-        scatteredRay->Attenuation.Rgb.x() * scatteredRayColor.Rgb.x(),
-        scatteredRay->Attenuation.Rgb.y() * scatteredRayColor.Rgb.y(),
-        scatteredRay->Attenuation.Rgb.z() * scatteredRayColor.Rgb.z()
-    );
+        if (lambertScatteredRay.has_value())
+        {
+            const Color lambertScatteredRayColor = TraceRayImpl(
+                bodies,
+                lambertScatteredRay->Ray,
+                rayMissFunction,
+                depth + 1
+            );
+
+            const float lambertContribution = (1.0f - closestBodyMaterial.Reflectivity);
+
+            attenuatedScatteredRgb += lambertContribution * multiplyElements(
+                lambertScatteredRay->Attenuation.Rgb,
+                lambertScatteredRayColor.Rgb
+            );
+        }
+    }
+
+    // Metallic component (if not fully diffuse)
+    {
+        const std::optional<ScatteredRay> metalScatteredRay = TryScatterMetallic(
+            ray,
+            closestRayHit,
+            closestBodyMaterial
+        );
+
+        if (metalScatteredRay.has_value())
+        {
+            const Color metalScatteredRayColor = TraceRayImpl(
+                bodies,
+                metalScatteredRay->Ray,
+                rayMissFunction,
+                depth + 1
+            );
+
+            const float metalContribution = closestBodyMaterial.Reflectivity;
+
+            attenuatedScatteredRgb += metalContribution * multiplyElements(
+                metalScatteredRay->Attenuation.Rgb,
+                metalScatteredRayColor.Rgb
+            );
+        }
+    }
+
+    return Color(attenuatedScatteredRgb);
 }
 
 static inline std::optional<float> TryRayHitSphereImpl(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius)
