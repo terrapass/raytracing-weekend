@@ -1,5 +1,7 @@
 #include "tracing.h"
 
+#include <cassert>
+
 #include "constants.h"
 #include "math_utils.h"
 #include "targets.h"
@@ -115,15 +117,36 @@ static inline std::optional<ScatteredRay> TryScatterLambertian(
     };
 }
 
-static inline std::optional<ScatteredRay> TryScatterMetalic(const Ray & ray, const RayHit & rayHit, const Material & material)
+static inline std::optional<ScatteredRay> TryScatterMetallic(
+    const Ray &      ray,
+    const RayHit &   rayHit,
+    const Material & material
+)
 {
     const Vector3 incident = ray.Direction.normalized();
     const Vector3 normal   = rayHit.RawNormal.normalized();
 
-    const Vector3 scatterDirection = incident - 2 * incident.dot(normal) * normal;
+    const Vector3 rawScatterDirection = incident - 2 * incident.dot(normal) * normal;
+
+    assert(material.Smoothness >= 0.0f && material.Smoothness <= 1.0f);
+    if (isAlmostEqual(material.Smoothness, 1.0f))
+    {
+        return ScatteredRay{
+            Ray(rayHit.Hitpoint, rawScatterDirection),
+            material.Albedo
+        };
+    }
+
+    const float   fuzziness        = 1.0f - material.Smoothness;
+    const Vector3 fuzzOffset       = fuzziness*GetRandomPointInUnitSphere();
+    const Vector3 scatterDirection = rawScatterDirection + fuzzOffset;
+
+    const bool isScatterBelowSurface = scatterDirection.dot(normal) <= 0.0f;
+    if (isScatterBelowSurface)
+        return std::nullopt;
 
     return ScatteredRay{
-        Ray(rayHit.Hitpoint, scatterDirection),
+        Ray(rayHit.Hitpoint, scatterDirection.normalized()),
         material.Albedo
     };
 }
@@ -176,7 +199,7 @@ static inline Color TraceRayImpl(
     const Body &   closestBody        = bodies[closestBodyIndex];
 
     const std::optional<ScatteredRay> scatteredRay = closestBody.Material.IsMetal
-        ? TryScatterMetalic(ray, closestRayHit, closestBody.Material)
+        ? TryScatterMetallic(ray, closestRayHit, closestBody.Material)
         : TryScatterLambertian(ray, closestRayHit, closestBody.Material);
     if (!scatteredRay.has_value())
         return Color::BLACK;
