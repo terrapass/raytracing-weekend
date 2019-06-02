@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include "constants.h"
+
 namespace rtwe
 {
 
@@ -18,6 +20,11 @@ std::optional<std::pair<float, float>> solveQuadraticEquation(const float a, con
         (b - sqrtD)/(2*a),
         (b + sqrtD)/(2*a)
     );
+}
+
+bool isAlmostEqual(const float value0, const float value1, const float epsilon)
+{
+    return std::abs(value1 - value0) < EPSILON;
 }
 
 }

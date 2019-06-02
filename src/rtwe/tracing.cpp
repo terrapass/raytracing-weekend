@@ -101,12 +101,29 @@ static inline Vector3 GetRandomPointInUnitSphere()
     }
 }
 
-static inline std::optional<ScatteredRay> TryScatterLambertian(const Ray & /*ray*/, const RayHit & rayHit, const Material & material)
+static inline std::optional<ScatteredRay> TryScatterLambertian(
+    const Ray &      /*ray*/,
+    const RayHit &   rayHit,
+    const Material & material
+)
 {
     const Vector3 scatterTarget = rayHit.Hitpoint + rayHit.RawNormal.normalized() + GetRandomPointInUnitSphere();
 
     return ScatteredRay{
         Ray(rayHit.Hitpoint, scatterTarget - rayHit.Hitpoint),
+        material.Albedo
+    };
+}
+
+static inline std::optional<ScatteredRay> TryScatterMetalic(const Ray & ray, const RayHit & rayHit, const Material & material)
+{
+    const Vector3 incident = ray.Direction.normalized();
+    const Vector3 normal   = rayHit.RawNormal.normalized();
+
+    const Vector3 scatterDirection = incident - 2 * incident.dot(normal) * normal;
+
+    return ScatteredRay{
+        Ray(rayHit.Hitpoint, scatterDirection),
         material.Albedo
     };
 }
@@ -158,7 +175,9 @@ static inline Color TraceRayImpl(
     const RayHit & closestRayHit      = closestRayHitIt->value();
     const Body &   closestBody        = bodies[closestBodyIndex];
 
-    const std::optional<ScatteredRay> scatteredRay = TryScatterLambertian(ray, closestRayHit, closestBody.Material);
+    const std::optional<ScatteredRay> scatteredRay = closestBody.Material.IsMetal
+        ? TryScatterMetalic(ray, closestRayHit, closestBody.Material)
+        : TryScatterLambertian(ray, closestRayHit, closestBody.Material);
     if (!scatteredRay.has_value())
         return Color::BLACK;
 

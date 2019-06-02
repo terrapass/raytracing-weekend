@@ -24,6 +24,9 @@ struct IRayTarget;
 struct Material final
 {
     Color Albedo;
+    bool IsMetal;
+    //float Smoothness;
+    //float Reflectivity;
 };
 
 struct Body final
