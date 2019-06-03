@@ -7,6 +7,7 @@
 #include <sdl2utils/guards.h>
 
 #include "constants.h"
+#include "math_utils.h"
 #include "tracing.h"
 #include "targets.h"
 #include "Camera.h"
@@ -43,7 +44,6 @@ Application::Application():
 // Interface
 //
 
-static inline float GetRandomValue();
 static inline Color RawNormalToColor(const Vector3 & rawNormal);
 
 int Application::run()
@@ -140,11 +140,6 @@ int Application::run()
 //
 // Service
 //
-
-static inline float GetRandomValue()
-{
-    return drand48(); // TODO: Replace with a call to C++ API
-}
 
 static inline Color RawNormalToColor(const Vector3 & rawNormal)
 {

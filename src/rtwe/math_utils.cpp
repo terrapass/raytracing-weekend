@@ -7,6 +7,11 @@
 namespace rtwe
 {
 
+float GetRandomValue()
+{
+    return drand48(); // TODO: Replace with a call to C++ API
+}
+
 std::optional<std::pair<float, float>> solveQuadraticEquation(const float a, const float b, const float c)
 {
     const float D = b*b - 4*a*c;
