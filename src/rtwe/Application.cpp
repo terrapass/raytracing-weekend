@@ -78,8 +78,8 @@ int Application::run()
     // The following code uses a left-handed coordinate system:
     // x points right, y points up, z points into the screen.
 
-    static const Vector3 CAMERA_ORIGIN    (0.0f, 0.0f, 0.0f);
-    static const Vector3 PROJECTION_CENTER(0.0f, 0.0f, 1.0f);
+    static const Vector3 CAMERA_ORIGIN    (0.0f, 0.0f, -1.0f);
+    static const Vector3 PROJECTION_CENTER(0.0f, 0.0f, 0.0f);
 
     const Camera camera(
         CAMERA_ORIGIN,
@@ -211,10 +211,10 @@ sdl2utils::SDL_TexturePtr Application::createStreamingTexture(SDL_Renderer * con
 std::vector<Body> Application::createRaytracingScene()
 {
     return {
-        {std::make_shared<PlaneRayTarget>(Vector3(0.0f, -0.5f, 0.0f), Vector3(0.0f, 1.0f, 0.0f)), Material{Color(0.75f, 0.75f, 0.75f), 0.0f,  0.0f}},
-        {std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),                      Material{Color(0.95f, 0.5f,  0.5f),  0.5f,  1.0f}},
+        {std::make_shared<PlaneRayTarget>(Vector3(0.0f, -0.5f, 0.0f), Vector3(0.0f, 1.0f, 0.0f)), Material{Color(0.75f, 0.75f, 0.75f), 0.25f, 0.85f}},
+        {std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),                      Material{Color(0.95f, 0.5f,  0.5f),  0.5f,  0.85f}},
         {std::make_shared<SphereRayTarget>(Vector3(0.75f, -0.25f, 0.75f), 0.25f),                 Material{Color(0.35f, 0.7f, 0.35f),  0.75f, 1.0f}},
-        {std::make_shared<SphereRayTarget>(Vector3(-1.25f, 0.25f, 1.5f), 0.75f),                  Material{Color(0.9f, 0.8f, 0.2f),    0.25f, 1.0f}}
+        {std::make_shared<SphereRayTarget>(Vector3(-1.25f, 0.25f, 1.5f), 0.75f),                  Material{Color(0.9f, 0.8f, 0.2f),    0.05f, 1.0f}}
     };
 }
 

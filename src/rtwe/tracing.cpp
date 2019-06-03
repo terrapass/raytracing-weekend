@@ -199,10 +199,10 @@ static inline Color TraceRayImpl(
     const Body &     closestBody         = bodies[closestBodyIndex];
     const Material & closestBodyMaterial = closestBody.Material;
 
-    Vector3 attenuatedScatteredRgb = Vector3::Zero();
+    const bool mustUseMetallic = (GetRandomValue() < closestBodyMaterial.Reflectivity);
 
     // Lambertian component (if not fully metallic)
-    if (!isAlmostEqual(closestBodyMaterial.Reflectivity, 1.0f))
+    if (!mustUseMetallic || isAlmostEqual(closestBodyMaterial.Reflectivity, 0.0f))
     {
         const std::optional<ScatteredRay> lambertScatteredRay = TryScatterLambertian(
             ray,
@@ -219,16 +219,17 @@ static inline Color TraceRayImpl(
                 depth + 1
             );
 
-            const float lambertContribution = (1.0f - closestBodyMaterial.Reflectivity);
-
-            attenuatedScatteredRgb += lambertContribution * multiplyElements(
+            return Color(multiplyElements(
                 lambertScatteredRay->Attenuation.Rgb,
                 lambertScatteredRayColor.Rgb
-            );
+            ));
+        }
+        else
+        {
+            return Color::BLACK;
         }
     }
-
-    // Metallic component (if not fully diffuse)
+    else // Metallic component (if not fully diffuse)
     {
         const std::optional<ScatteredRay> metalScatteredRay = TryScatterMetallic(
             ray,
@@ -245,16 +246,18 @@ static inline Color TraceRayImpl(
                 depth + 1
             );
 
-            const float metalContribution = closestBodyMaterial.Reflectivity;
-
-            attenuatedScatteredRgb += metalContribution * multiplyElements(
+            return Color(multiplyElements(
                 metalScatteredRay->Attenuation.Rgb,
                 metalScatteredRayColor.Rgb
-            );
+            ));
+        }
+        else
+        {
+            return Color::BLACK;
         }
     }
 
-    return Color(attenuatedScatteredRgb);
+    assert(false && "Must return before this point");
 }
 
 static inline std::optional<float> TryRayHitSphereImpl(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius)
