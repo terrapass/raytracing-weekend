@@ -26,6 +26,8 @@ struct Material final
     Color Albedo;
     float Reflectivity;
     float Smoothness;
+    float Transparency;
+    float RefractiveIndex;
 };
 
 struct Body final

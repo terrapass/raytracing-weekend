@@ -20,6 +20,8 @@ constexpr bool IS_DEBUG = !IS_RELEASE;
 
 constexpr float RAYTRACE_MIN_RAY_PARAM = 0.0001f;
 
+constexpr float ENVIRONMENT_REFRACTIVE_INDEX = 1.0f;
+
 }
 
 #endif

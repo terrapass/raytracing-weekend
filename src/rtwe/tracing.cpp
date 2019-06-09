@@ -151,11 +151,90 @@ static inline std::optional<ScatteredRay> TryScatterMetallic(
     };
 }
 
+static inline std::optional<ScatteredRay> TryScatterRefractive(
+    const Ray &      ray,
+    const RayHit &   rayHit,
+    const Material & material
+)
+{
+    const Vector3 incident      = ray.Direction.normalized(); // TODO: See if this is the same before and after determining doesRayExitNoraml
+    const Vector3 surfaceNormal = rayHit.RawNormal.normalized(); // TODO: don't confuse with outward normal
+    const float   dotProduct    = incident.dot(surfaceNormal);
+
+    const bool doesRayExitBody = (dotProduct > 0.0f);
+
+    const float reflectiveRatio = doesRayExitBody
+        ? material.RefractiveIndex/ENVIRONMENT_REFRACTIVE_INDEX
+        : ENVIRONMENT_REFRACTIVE_INDEX/material.RefractiveIndex;
+
+    const Vector3 outwardNormal = doesRayExitBody
+        ? -surfaceNormal
+        : surfaceNormal;
+
+    const float discriminant = 1.0f - reflectiveRatio*reflectiveRatio * (1.0f - dotProduct*dotProduct);
+
+    const bool canRefract = (discriminant >= 0.0f);
+    if (!canRefract)
+    {
+        // If unable to refract, reflect the ray
+        return TryScatterMetallic(ray, rayHit, material);
+    }
+
+    const Vector3 refractDirection = reflectiveRatio * (incident - outwardNormal*dotProduct) - outwardNormal*std::sqrt(discriminant);
+
+    return ScatteredRay{
+        Ray(rayHit.Hitpoint, refractDirection),
+        Color::WHITE
+    };
+}
+
 static inline float GetRayHitSqrDistance(const Vector3 rayOrigin, const std::optional<RayHit> & rayHit)
 {
     return rayHit.has_value()
         ? (rayHit->Hitpoint - rayOrigin).squaredNorm()
         : INFINITY;
+}
+
+using ScatterFunc = std::optional<ScatteredRay> (*) (
+    const Ray &      ray,
+    const RayHit &   rayHit,
+    const Material & material
+);
+
+static inline Color GetScatteredRayColor(
+    const ScatterFunc         scatterFunc,
+    const std::vector<Body> & bodies,
+    const Ray &               ray,
+    const RayMissFunction &   rayMissFunction,
+    const int                 depth,
+    const RayHit &            rayHit,
+    const Material &          material
+)
+{
+    const std::optional<ScatteredRay> scatteredRay = scatterFunc(
+        ray,
+        rayHit,
+        material
+    );
+
+    if (scatteredRay.has_value())
+    {
+        const Color scatteredRayColor = TraceRayImpl(
+            bodies,
+            scatteredRay->Ray,
+            rayMissFunction,
+            depth + 1
+        );
+
+        return Color(multiplyElements(
+            scatteredRay->Attenuation.Rgb,
+            scatteredRayColor.Rgb
+        ));
+    }
+    else
+    {
+        return Color::BLACK;
+    }
 }
 
 static inline Color TraceRayImpl(
@@ -199,65 +278,29 @@ static inline Color TraceRayImpl(
     const Body &     closestBody         = bodies[closestBodyIndex];
     const Material & closestBodyMaterial = closestBody.Material;
 
-    const bool mustUseMetallic = (GetRandomValue() < closestBodyMaterial.Reflectivity);
+    // Select scattering function via roulette-wheel, using Reflectivity, (1.0 - Reflectivity), and Transparency as weights.
 
-    // Lambertian component (if not fully metallic)
-    if (!mustUseMetallic || isAlmostEqual(closestBodyMaterial.Reflectivity, 0.0f))
-    {
-        const std::optional<ScatteredRay> lambertScatteredRay = TryScatterLambertian(
-            ray,
-            closestRayHit,
-            closestBodyMaterial
-        );
+    const float scatterFuncsWeightSum = 1.0f + closestBodyMaterial.Transparency;
+    ScatterFunc selectedScatterFunc   = nullptr;
 
-        if (lambertScatteredRay.has_value())
-        {
-            const Color lambertScatteredRayColor = TraceRayImpl(
-                bodies,
-                lambertScatteredRay->Ray,
-                rayMissFunction,
-                depth + 1
-            );
+    float randomValue = GetRandomValue()*scatterFuncsWeightSum;
 
-            return Color(multiplyElements(
-                lambertScatteredRay->Attenuation.Rgb,
-                lambertScatteredRayColor.Rgb
-            ));
-        }
-        else
-        {
-            return Color::BLACK;
-        }
-    }
-    else // Metallic component (if not fully diffuse)
-    {
-        const std::optional<ScatteredRay> metalScatteredRay = TryScatterMetallic(
-            ray,
-            closestRayHit,
-            closestBodyMaterial
-        );
+    if ((randomValue -= closestBodyMaterial.Reflectivity) < 0.0f)
+        selectedScatterFunc = TryScatterMetallic;
+    else if ((randomValue -= closestBodyMaterial.Transparency) < 0.0f)
+        selectedScatterFunc = TryScatterRefractive;
+    else
+        selectedScatterFunc = TryScatterLambertian;
 
-        if (metalScatteredRay.has_value())
-        {
-            const Color metalScatteredRayColor = TraceRayImpl(
-                bodies,
-                metalScatteredRay->Ray,
-                rayMissFunction,
-                depth + 1
-            );
-
-            return Color(multiplyElements(
-                metalScatteredRay->Attenuation.Rgb,
-                metalScatteredRayColor.Rgb
-            ));
-        }
-        else
-        {
-            return Color::BLACK;
-        }
-    }
-
-    assert(false && "Must return before this point");
+    return GetScatteredRayColor(
+        selectedScatterFunc,
+        bodies,
+        ray,
+        rayMissFunction,
+        depth,
+        closestRayHit,
+        closestBodyMaterial
+    );
 }
 
 static inline std::optional<float> TryRayHitSphereImpl(const Ray & ray, const Vector3 & sphereCenter, const float sphereRadius)
