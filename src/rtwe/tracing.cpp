@@ -1,6 +1,7 @@
 #include "tracing.h"
 
 #include <cassert>
+#include <boost/log/trivial.hpp>
 
 #include "constants.h"
 #include "math_utils.h"
@@ -151,6 +152,31 @@ static inline std::optional<ScatteredRay> TryScatterMetallic(
     };
 }
 
+/**
+ * @brief Calculates reflection probability for dielectrics using Schlick's approximation.
+ * 
+ * @param cosTheta Cosine of the angle between incident ray and surface normal.
+ * @param environmentRefractiveIndex Refractive index (eta) of the medium from which the ray exits.
+ * @param bodyRefractiveIndex Refractive index (eta) of the medium which the ray enters.
+ * 
+ * @return Reflection probability (between 0.0f and 1.0f).
+ */
+static inline float GetSchlickReflectivity(
+    const float cosTheta,
+    const float environmentRefractiveIndex,
+    const float bodyRefractiveIndex
+)
+{
+    assert(cosTheta >= -1.0f && cosTheta <= 1.0f);
+
+    const float sqrtMinReflectivity =
+        (environmentRefractiveIndex - bodyRefractiveIndex)/(environmentRefractiveIndex + bodyRefractiveIndex);
+
+    const float minReflectivity = sqrtMinReflectivity*sqrtMinReflectivity;
+
+    return minReflectivity + (1.0f - minReflectivity)*std::pow(1.0f - cosTheta, 5.0f);
+}
+
 static inline std::optional<ScatteredRay> TryScatterRefractive(
     const Ray &      ray,
     const RayHit &   rayHit,
@@ -163,7 +189,7 @@ static inline std::optional<ScatteredRay> TryScatterRefractive(
 
     const bool doesRayExitBody = (dotProduct > 0.0f);
 
-    const float reflectiveRatio = doesRayExitBody
+    const float refractiveRatio = doesRayExitBody
         ? material.RefractiveIndex/ENVIRONMENT_REFRACTIVE_INDEX
         : ENVIRONMENT_REFRACTIVE_INDEX/material.RefractiveIndex;
 
@@ -171,7 +197,7 @@ static inline std::optional<ScatteredRay> TryScatterRefractive(
         ? -surfaceNormal
         : surfaceNormal;
 
-    const float discriminant = 1.0f - reflectiveRatio*reflectiveRatio * (1.0f - dotProduct*dotProduct);
+    const float discriminant = 1.0f - refractiveRatio*refractiveRatio * (1.0f - dotProduct*dotProduct);
 
     const bool canRefract = (discriminant >= 0.0f);
     if (!canRefract)
@@ -180,7 +206,19 @@ static inline std::optional<ScatteredRay> TryScatterRefractive(
         return TryScatterMetallic(ray, rayHit, material);
     }
 
-    const Vector3 refractDirection = reflectiveRatio * (incident - outwardNormal*dotProduct) - outwardNormal*std::sqrt(discriminant);
+    const float reflectionProbability = GetSchlickReflectivity(
+        doesRayExitBody ? refractiveRatio*incident.dot(surfaceNormal) : -incident.dot(surfaceNormal),
+        doesRayExitBody ? material.RefractiveIndex                    : ENVIRONMENT_REFRACTIVE_INDEX,
+        doesRayExitBody ? ENVIRONMENT_REFRACTIVE_INDEX                : material.RefractiveIndex
+    );
+
+    if (GetRandomValue() < reflectionProbability)
+    {
+        // Reflect the ray
+        return TryScatterMetallic(ray, rayHit, material);
+    }
+
+    const Vector3 refractDirection = refractiveRatio * (incident - outwardNormal*dotProduct) - outwardNormal*std::sqrt(discriminant);
 
     return ScatteredRay{
         Ray(rayHit.Hitpoint, refractDirection),
