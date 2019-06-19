@@ -221,8 +221,8 @@ std::vector<Body> Application::createRaytracingScene()
         {
             std::make_shared<SphereRayTarget>(Vector3(0.0f, 0.0f, 1.0f), 0.5f),
             Material{
-                Color(0.95f, 0.5f,  0.5f),
-                0.5f, 0.85f, 0.0f, 1.0f
+                Color(0.75f, 0.75f,  0.75f),
+                0.975f, 0.975f, 0.975f, 1.5f
             }
         },
         {
@@ -235,15 +235,8 @@ std::vector<Body> Application::createRaytracingScene()
         {
             std::make_shared<SphereRayTarget>(Vector3(-1.25f, 0.25f, 1.5f), 0.75f),
             Material{
-                Color(0.9f, 0.8f, 0.2f),
-                0.05f, 1.0f, 0.0f, 1.0f
-            }
-        },
-        {
-            std::make_shared<SphereRayTarget>(Vector3(0.25f, -0.2f, 0.0f), 0.3f),
-            Material{
-                Color(0.8f, 0.8f, 0.8f),
-                0.9f, 0.99f, 1.0f, 1.5f
+                Color(0.8f, 0.4f, 0.6f),
+                0.0f, 1.0f, 0.0f, 1.0f
             }
         }
     };
