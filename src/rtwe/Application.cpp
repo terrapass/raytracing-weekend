@@ -79,11 +79,13 @@ int Application::run()
     // x points right, y points up, z points into the screen.
 
     static const Vector3 CAMERA_ORIGIN    (0.0f, 0.0f, -1.0f);
+    static const Vector3 CAMERA_UP        (0.0f, 1.0f, 0.0f);
     static const Vector3 PROJECTION_CENTER(0.0f, 0.0f, 0.0f);
 
     const Camera camera(
         CAMERA_ORIGIN,
         PROJECTION_CENTER,
+        CAMERA_UP,
         PROJECTION_WIDTH,
         PROJECTION_HEIGHT
     );

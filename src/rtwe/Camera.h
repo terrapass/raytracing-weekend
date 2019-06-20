@@ -12,10 +12,11 @@ class Camera final
 public: // Construction
 
     inline Camera(
-        Vector3 origin,
-        Vector3 projectionCenter,
-        const float projectionWidth,
-        const float projectionHeight
+        Vector3       origin,
+        Vector3       projectionCenter,
+        const Vector3 up,
+        const float   projectionWidth,
+        const float   projectionHeight
     );
 
 public: // Interface
@@ -26,8 +27,8 @@ private: // Members
 
     const Vector3 m_Origin;
     const Vector3 m_ProjectionCenter;
-    const float   m_ProjectionWidth;
-    const float   m_ProjectionHeight;
+    const Vector3 m_ProjectionUp;
+    const Vector3 m_ProjectionRight;
 };
 
 //
@@ -35,15 +36,16 @@ private: // Members
 //
 
 inline Camera::Camera(
-    Vector3 origin,
-    Vector3 projectionCenter,
-    const float projectionWidth,
-    const float projectionHeight
+    Vector3       origin,
+    Vector3       projectionCenter,
+    const Vector3 up,
+    const float   projectionWidth,
+    const float   projectionHeight
 ):
     m_Origin          (std::move(origin)),
     m_ProjectionCenter(std::move(projectionCenter)),
-    m_ProjectionWidth (projectionWidth),
-    m_ProjectionHeight(projectionHeight)
+    m_ProjectionUp    (projectionHeight * up.normalized()),
+    m_ProjectionRight (projectionWidth  * up.cross(m_ProjectionCenter - m_Origin).normalized())
 {
     // Empty
 }
@@ -54,9 +56,10 @@ inline Camera::Camera(
 
 inline Ray Camera::CreateRay(const float normalizedTargetX, const float normalizedTargetY) const
 {
-    Vector3 raytracingTarget = m_ProjectionCenter;
-    raytracingTarget.x() += m_ProjectionWidth  * (normalizedTargetX - 0.5f);
-    raytracingTarget.y() += m_ProjectionHeight * (normalizedTargetY - 0.5f);
+    const Vector3 raytracingTarget =
+        m_ProjectionCenter + 
+        m_ProjectionRight * (normalizedTargetX - 0.5f) +
+        m_ProjectionUp    * (normalizedTargetY - 0.5f);
 
     return Ray(
         m_Origin,
@@ -64,6 +67,6 @@ inline Ray Camera::CreateRay(const float normalizedTargetX, const float normaliz
     );
 }
 
-}
+} // namespace rtwe
 
 #endif // RTWE_CAMERA_H
