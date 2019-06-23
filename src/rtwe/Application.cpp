@@ -46,6 +46,16 @@ Application::Application():
 
 static inline Color RawNormalToColor(const Vector3 & rawNormal);
 
+static inline Vector3 SamplePixelRgb(
+    const std::vector<Body> & scene,
+    const Camera &            camera,
+    const RayMissFunction     rayMissFunc,
+    const int                 imageWidth,
+    const int                 imageHeight,
+    const int                 pixelX,
+    const int                 pixelY
+);
+
 int Application::run()
 {
     const sdl2utils::SDL_WindowPtr window = createWindow();
@@ -59,18 +69,8 @@ int Application::run()
 
     const std::vector<Body> raytracingScene = createRaytracingScene();
 
-    void * pixels = nullptr;
-    int    pitch  = -1;
-
-    const int lockResult = SDL_LockTexture(streamingTexture.get(), nullptr, &pixels, &pitch);
-    assert(lockResult == 0 && "SDL_LockTexture() must succeed");
-
     static const float PROJECTION_HEIGHT = 2.0f;
     static const float PROJECTION_WIDTH  = PROJECTION_HEIGHT * WINDOW_ASPECT_RATIO;
-
-    static const int SAMPLES_PER_PIXEL = IS_RELEASE
-        ? 128
-        : 1;
 
     static const Color BACKGROUND_TOP_COLOR   (0.7f, 0.7f, 0.95f);
     static const Color BACKGROUND_BOTTOM_COLOR(0.9f, 0.9f, 0.9f);
@@ -90,51 +90,56 @@ int Application::run()
         PROJECTION_HEIGHT
     );
 
-    for (int y = 0; y < WINDOW_HEIGHT; y++)
+    const RayMissFunction rayMissFunc = std::bind(
+        GetVerticalGradientColor,
+        std::placeholders::_1,
+        BACKGROUND_BOTTOM_COLOR,
+        BACKGROUND_TOP_COLOR
+    );
+
+    std::array<Vector3, WINDOW_WIDTH*WINDOW_HEIGHT> accumulatedPixelRgbs;
+    accumulatedPixelRgbs.fill(Vector3::Zero());
+
+    long frames = 0;
+    while (!sdl2utils::escOrCrossPressed())
     {
-        for (int x = 0; x < WINDOW_WIDTH; x++)
+        frames++;
+
+        void * pixels = nullptr;
+        int    pitch  = -1;
+
+        const int lockResult = SDL_LockTexture(streamingTexture.get(), nullptr, &pixels, &pitch);
+        assert(lockResult == 0 && "SDL_LockTexture() must succeed");
+
+        for (int y = 0; y < WINDOW_HEIGHT; y++)
         {
-            const int      pixelOffset = y*pitch + x*sizeof(Uint32);
-            Uint32 * const pixel       = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
-
-            Vector3 accumulatedRgb = Vector3::Zero();
-
-            for (int sampleIdx = 0; sampleIdx < SAMPLES_PER_PIXEL; sampleIdx++)
+            for (int x = 0; x < WINDOW_WIDTH; x++)
             {
-                const float sampleX = (static_cast<float>(x) + GetRandomValue() - 0.5f);
-                const float sampleY = (static_cast<float>(y) + GetRandomValue() - 0.5f);
+                const size_t   pixelIndex  = y*WINDOW_WIDTH + x;
+                const int      pixelOffset = y*pitch + x*sizeof(Uint32);
+                Uint32 * const pixel       = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
 
-                const float normalizedSampleX = sampleX/static_cast<float>(WINDOW_WIDTH);
-                const float normalizedSampleY = 1.0f - sampleY/static_cast<float>(WINDOW_HEIGHT);
-
-                const Ray ray = camera.CreateRay(normalizedSampleX, normalizedSampleY);
-
-                const Color rayColor = TraceRay(
+                accumulatedPixelRgbs[pixelIndex] += SamplePixelRgb(
                     raytracingScene,
-                    ray,
-                    std::bind(
-                        GetVerticalGradientColor,
-                        std::placeholders::_1,
-                        BACKGROUND_BOTTOM_COLOR,
-                        BACKGROUND_TOP_COLOR
-                    )
+                    camera,
+                    rayMissFunc,
+                    WINDOW_WIDTH,
+                    WINDOW_HEIGHT,
+                    x,
+                    y
                 );
 
-                accumulatedRgb += rayColor.Rgb;
+                Vector3 averageRgb = accumulatedPixelRgbs[pixelIndex]/static_cast<float>(frames);
+
+                *pixel = Color(std::move(averageRgb)).ToArgb();
             }
-
-            const Vector3 averageRgb = accumulatedRgb/static_cast<float>(SAMPLES_PER_PIXEL);
-
-            *pixel = Color(std::move(averageRgb)).ToArgb();
         }
+
+        SDL_UnlockTexture(streamingTexture.get());
+
+        SDL_RenderCopy(renderer.get(), streamingTexture.get(), nullptr, nullptr);
+        SDL_RenderPresent(renderer.get());
     }
-
-    SDL_UnlockTexture(streamingTexture.get());
-
-    SDL_RenderCopy(renderer.get(), streamingTexture.get(), nullptr, nullptr);
-    SDL_RenderPresent(renderer.get());
-
-    sdl2utils::waitEscOrCrossPressed();
 
     return 0;
 }
@@ -149,6 +154,33 @@ static inline Color RawNormalToColor(const Vector3 & rawNormal)
     const Vector3 nonNegativeNormal = 0.5f*(normal + Vector3(1.0f, 1.0f, 1.0f));
 
     return Color(nonNegativeNormal);
+}
+
+static inline Vector3 SamplePixelRgb(
+    const std::vector<Body> & scene,
+    const Camera &            camera,
+    const RayMissFunction     rayMissFunc,
+    const int                 imageWidth,
+    const int                 imageHeight,
+    const int                 pixelX,
+    const int                 pixelY
+)
+{
+    const float sampleX = (static_cast<float>(pixelX) + GetRandomValue() - 0.5f);
+    const float sampleY = (static_cast<float>(pixelY) + GetRandomValue() - 0.5f);
+
+    const float normalizedSampleX = sampleX/static_cast<float>(imageWidth);
+    const float normalizedSampleY = 1.0f - sampleY/static_cast<float>(imageHeight);
+
+    const Ray ray = camera.CreateRay(normalizedSampleX, normalizedSampleY);
+
+    const Color rayColor = TraceRay(
+        scene,
+        ray,
+        rayMissFunc
+    );
+
+    return rayColor.Rgb;
 }
 
 sdl2utils::SDL_WindowPtr Application::createWindow()
