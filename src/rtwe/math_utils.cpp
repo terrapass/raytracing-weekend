@@ -29,7 +29,7 @@ std::optional<std::pair<float, float>> solveQuadraticEquation(const float a, con
 
 bool isAlmostEqual(const float value0, const float value1, const float epsilon)
 {
-    return std::abs(value1 - value0) < EPSILON;
+    return std::abs(value1 - value0) < epsilon;
 }
 
 Vector3 multiplyElements(const Vector3 & vector0, const Vector3 & vector1)
