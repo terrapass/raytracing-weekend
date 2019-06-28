@@ -11,6 +11,9 @@
 #include "tracing.h"
 #include "targets.h"
 #include "Camera.h"
+#include "Image.h"
+#include "threading.h"
+#include "tasks.h"
 
 namespace rtwe
 {
@@ -46,14 +49,12 @@ Application::Application():
 
 static inline Color RawNormalToColor(const Vector3 & rawNormal);
 
-static inline Vector3 SamplePixelRgb(
-    const std::vector<Body> & scene,
-    const Camera &            camera,
-    const RayMissFunction     rayMissFunc,
-    const int                 imageWidth,
-    const int                 imageHeight,
-    const int                 pixelX,
-    const int                 pixelY
+static inline void InitSamplingThreadPool(
+    RepeatingSamplePixelTask::SamplingThreadPool & threadPool,
+    Image &                                        targetImage,
+    const std::vector<Body> &                      scene,
+    const Camera &                                 camera,
+    const RayMissFunction                          rayMissFunc
 );
 
 int Application::run()
@@ -97,14 +98,19 @@ int Application::run()
         BACKGROUND_TOP_COLOR
     );
 
-    std::array<Vector3, WINDOW_WIDTH*WINDOW_HEIGHT> accumulatedPixelRgbs;
-    accumulatedPixelRgbs.fill(Vector3::Zero());
+    Image raytracedImage(WINDOW_WIDTH, WINDOW_HEIGHT);
 
-    long frames = 0;
+    RepeatingSamplePixelTask::SamplingThreadPool threadPool(HARDWARE_MAX_CONCURRENT_THREADS - 1);
+    InitSamplingThreadPool(
+        threadPool,
+        raytracedImage,
+        raytracingScene,
+        camera,
+        rayMissFunc
+    );
+
     while (!sdl2utils::escOrCrossPressed())
     {
-        frames++;
-
         void * pixels = nullptr;
         int    pitch  = -1;
 
@@ -115,23 +121,10 @@ int Application::run()
         {
             for (int x = 0; x < WINDOW_WIDTH; x++)
             {
-                const size_t   pixelIndex  = y*WINDOW_WIDTH + x;
                 const int      pixelOffset = y*pitch + x*sizeof(Uint32);
                 Uint32 * const pixel       = reinterpret_cast<Uint32 *>(reinterpret_cast<Uint8 *>(pixels) + pixelOffset);
 
-                accumulatedPixelRgbs[pixelIndex] += SamplePixelRgb(
-                    raytracingScene,
-                    camera,
-                    rayMissFunc,
-                    WINDOW_WIDTH,
-                    WINDOW_HEIGHT,
-                    x,
-                    y
-                );
-
-                Vector3 averageRgb = accumulatedPixelRgbs[pixelIndex]/static_cast<float>(frames);
-
-                *pixel = Color(std::move(averageRgb)).ToArgb();
+                *pixel = raytracedImage.GetPixelColor(x, y).ToArgb();
             }
         }
 
@@ -156,31 +149,29 @@ static inline Color RawNormalToColor(const Vector3 & rawNormal)
     return Color(nonNegativeNormal);
 }
 
-static inline Vector3 SamplePixelRgb(
-    const std::vector<Body> & scene,
-    const Camera &            camera,
-    const RayMissFunction     rayMissFunc,
-    const int                 imageWidth,
-    const int                 imageHeight,
-    const int                 pixelX,
-    const int                 pixelY
+static inline void InitSamplingThreadPool(
+    RepeatingSamplePixelTask::SamplingThreadPool & threadPool,
+    Image &                                        targetImage,
+    const std::vector<Body> &                      scene,
+    const Camera &                                 camera,
+    const RayMissFunction                          rayMissFunc
 )
 {
-    const float sampleX = (static_cast<float>(pixelX) + GetRandomValue() - 0.5f);
-    const float sampleY = (static_cast<float>(pixelY) + GetRandomValue() - 0.5f);
-
-    const float normalizedSampleX = sampleX/static_cast<float>(imageWidth);
-    const float normalizedSampleY = 1.0f - sampleY/static_cast<float>(imageHeight);
-
-    const Ray ray = camera.CreateRay(normalizedSampleX, normalizedSampleY);
-
-    const Color rayColor = TraceRay(
-        scene,
-        ray,
-        rayMissFunc
-    );
-
-    return rayColor.Rgb;
+    for (int y = 0; y < targetImage.GetHeight(); y++)
+    {
+        for (int x = 0; x < targetImage.GetWidth(); x++)
+        {
+            threadPool.EmplaceTask(
+                threadPool,
+                targetImage,
+                scene,
+                camera,
+                rayMissFunc,
+                x,
+                y
+            );
+        }
+    }
 }
 
 sdl2utils::SDL_WindowPtr Application::createWindow()
