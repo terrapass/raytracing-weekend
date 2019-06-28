@@ -1,7 +1,7 @@
 #ifndef RTWE_IMAGE_H
 #define RTWE_IMAGE_H
 
-#include <mutex>
+#include <shared_mutex>
 
 #include "types.h"
 #include "math_utils.h"
@@ -33,11 +33,13 @@ public: // Interface
      */
     inline bool SubmitPixelRgb(const int x, const int y, const Vector3 & rgb);
 
-    //inline void LockForReading() const; // TODO?
+    // TODO: See if the following three methods may be replaced with one returning some RTTI entity.
+
+    void LockForReading() const;
 
     inline Color GetPixelColor(const int x, const int y) const;
 
-    //inline void UnlockAfterReading() const; // TODO?
+    void UnlockAfterReading() const;
 
 private: // Service types
 
@@ -71,7 +73,20 @@ private: // Members
 
     std::vector<PixelRgbAccumulator> m_PixelRgbAccumulators;
 
-    mutable std::mutex m_Mutex; // TODO: Use shared_mutex?
+    // This mutex is locked exclusively only when LockForReading() is called
+    // to prevent worker threads from modifying the image while it's being rendered
+    // (while the renderer repeatedly calls GetPixelColor()).
+    //
+    // Counterintuitively, writers (SubmitPixelRgb()) don't need an exclusive lock,
+    // since the way this method is currently used, modifications of the same elements
+    // in m_PixelRgbAccumulators CANNOT overlap.
+    //
+    // TODO: Introduce debug-only mutex and assertions to enforce this pattern of usage.
+    mutable std::shared_mutex m_ReadingMutex;
+
+#ifdef RTWE_DEBUG
+    mutable bool m_IsReadingMutexLockedExclusively;
+#endif
 };
 
 //
@@ -90,7 +105,7 @@ inline int Image::GetHeight() const
 
 inline bool Image::SubmitPixelRgb(const int x, const int y, const Vector3 & rgb)
 {
-    std::unique_lock lock(m_Mutex);
+    std::shared_lock lock(m_ReadingMutex);
 
     PixelRgbAccumulator & accumulator = m_PixelRgbAccumulators[ToPixelIndex(x, y)];
 
@@ -104,7 +119,7 @@ inline bool Image::SubmitPixelRgb(const int x, const int y, const Vector3 & rgb)
 
 inline Color Image::GetPixelColor(const int x, const int y) const
 {
-    std::unique_lock lock(m_Mutex);
+    assert(m_IsReadingMutexLockedExclusively && "GetPixelColor() must be called after LockForReading() and before UnlockAfterReading()");
 
     const PixelRgbAccumulator & accumulator = m_PixelRgbAccumulators[ToPixelIndex(x, y)];
 

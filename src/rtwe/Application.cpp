@@ -109,6 +109,8 @@ int Application::run()
         rayMissFunc
     );
 
+    static const int MS_PER_FRAME = 333; // 3 FPS
+
     while (!sdl2utils::escOrCrossPressed())
     {
         void * pixels = nullptr;
@@ -116,6 +118,8 @@ int Application::run()
 
         const int lockResult = SDL_LockTexture(streamingTexture.get(), nullptr, &pixels, &pitch);
         assert(lockResult == 0 && "SDL_LockTexture() must succeed");
+
+        raytracedImage.LockForReading();
 
         for (int y = 0; y < WINDOW_HEIGHT; y++)
         {
@@ -128,10 +132,14 @@ int Application::run()
             }
         }
 
+        raytracedImage.UnlockAfterReading();
+
         SDL_UnlockTexture(streamingTexture.get());
 
         SDL_RenderCopy(renderer.get(), streamingTexture.get(), nullptr, nullptr);
         SDL_RenderPresent(renderer.get());
+
+        SDL_Delay(MS_PER_FRAME);
     }
 
     return 0;
