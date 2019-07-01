@@ -1,6 +1,7 @@
 #include "math_utils.h"
 
 #include <cmath>
+#include <random>
 
 #include "constants.h"
 
@@ -9,7 +10,11 @@ namespace rtwe
 
 float GetRandomValue()
 {
-    return drand48(); // TODO: Replace with a call to C++ API
+    static std::random_device                    randomDevice;
+    static std::mt19937                          generator(randomDevice()); // TODO: Look into replacing this with Xorshift
+    static std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+
+	return distribution(generator);
 }
 
 std::optional<std::pair<float, float>> solveQuadraticEquation(const float a, const float b, const float c)
