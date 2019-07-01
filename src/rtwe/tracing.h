@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <functional>
+#include <optional>
 
 #include "types.h"
 #include "Color.h"
