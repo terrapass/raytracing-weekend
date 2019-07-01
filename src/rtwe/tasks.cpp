@@ -12,22 +12,20 @@ namespace rtwe
 // Construction
 //
 
-RepeatingSamplePixelTask::RepeatingSamplePixelTask(
+RepeatingSampleImageBandTask::RepeatingSampleImageBandTask(
     SamplingThreadPool &      threadPool,
     Image &                   targetImage,
     const std::vector<Body> & scene,
     const Camera &            camera,
     const RayMissFunction     rayMissFunc,
-    const int                 pixelX,
-    const int                 pixelY
+    const int                 bandIndex
 ):
     m_pThreadPool (&threadPool),
     m_pTargetImage(&targetImage),
     m_pScene      (&scene),
     m_pCamera     (&camera),
     m_RayMissFunc (rayMissFunc),
-    m_PixelX      (pixelX),
-    m_PixelY      (pixelY)
+    m_BandIndex   (bandIndex)
 {
     // Empty
 }
@@ -46,21 +44,49 @@ static inline Vector3 SamplePixelRgb(
     const int                 pixelY
 );
 
-void RepeatingSamplePixelTask::operator()()
+void RepeatingSampleImageBandTask::operator()()
 {
-    const Vector3 sampleColor = SamplePixelRgb(
-        *m_pScene,
-        *m_pCamera,
-        m_RayMissFunc,
-        m_pTargetImage->GetWidth(),
-        m_pTargetImage->GetHeight(),
-        m_PixelX,
-        m_PixelY
-    );
+    const std::pair<int, int> bandYRange = m_pTargetImage->GetBandYRange(m_BandIndex);
 
-    // Repeat the task, if the target pixel can still be modified
-    if (m_pTargetImage->SubmitPixelRgb(m_PixelX, m_PixelY, sampleColor))
+    bool isAnyPixelModifiable = false;
+    for (int y = bandYRange.first; y < bandYRange.second; y++)
+    {
+        for (int x = 0; x < m_pTargetImage->GetWidth(); x++)
+        {
+            const Vector3 sampleColor = SamplePixelRgb(
+                *m_pScene,
+                *m_pCamera,
+                m_RayMissFunc,
+                m_pTargetImage->GetWidth(),
+                m_pTargetImage->GetHeight(),
+                x,
+                y
+            );
+
+            // FIXME: This pattern of locks-unlocks is inefficient, since it happens on every iteration.
+            //        However, taking it out of the loop won't help much because SamplePixelRgb() is a slow operation.
+            //        Perhaps a different synchronization primitive than a mere std::mutex would be better suited here.
+            m_pTargetImage->LockBand(m_BandIndex);
+
+            if (m_pTargetImage->SubmitPixelRgb(x, y, sampleColor))
+                isAnyPixelModifiable = true;
+
+            m_pTargetImage->UnlockBand(m_BandIndex);
+        }
+    }
+
+    // Repeat the task, if any pixels in the target band can still be modified
+    if (isAnyPixelModifiable)
+    {
         m_pThreadPool->EmplaceTask(std::move(*this));
+    }
+    else
+    {
+        BOOST_LOG_TRIVIAL(info)<<
+            "All pixels in image band " << m_BandIndex <<
+            " (y coords " << bandYRange.first << " to " << bandYRange.second <<
+            " have reached their final values";
+    }
 }
 
 //

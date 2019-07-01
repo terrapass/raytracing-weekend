@@ -23,25 +23,24 @@ class Camera;
 //
 //
 
-struct RepeatingSamplePixelTask final
+struct RepeatingSampleImageBandTask final
 {
 public: // Type aliases
 
-    using SamplingThreadPool = ThreadPool<RepeatingSamplePixelTask>;
+    using SamplingThreadPool = ThreadPool<RepeatingSampleImageBandTask>;
 
 public: // Construction
 
-    RepeatingSamplePixelTask(
+    RepeatingSampleImageBandTask(
         SamplingThreadPool &      threadPool,
         Image &                   targetImage,
         const std::vector<Body> & scene,
         const Camera &            camera,
         const RayMissFunction     rayMissFunc,
-        const int                 pixelX,
-        const int                 pixelY
+        const int                 bandIndex
     );
 
-    RepeatingSamplePixelTask(RepeatingSamplePixelTask &&) = default;
+    RepeatingSampleImageBandTask(RepeatingSampleImageBandTask &&) = default;
 
 public: // Interface
 
@@ -55,8 +54,7 @@ private: // Members
     const Camera *            m_pCamera;
 
     RayMissFunction m_RayMissFunc;
-    int             m_PixelX;
-    int             m_PixelY;
+    int             m_BandIndex;
 };
 
 }

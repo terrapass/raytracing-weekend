@@ -50,11 +50,11 @@ Application::Application():
 static inline Color RawNormalToColor(const Vector3 & rawNormal);
 
 static inline void InitSamplingThreadPool(
-    RepeatingSamplePixelTask::SamplingThreadPool & threadPool,
-    Image &                                        targetImage,
-    const std::vector<Body> &                      scene,
-    const Camera &                                 camera,
-    const RayMissFunction                          rayMissFunc
+    RepeatingSampleImageBandTask::SamplingThreadPool & threadPool,
+    Image &                                            targetImage,
+    const std::vector<Body> &                          scene,
+    const Camera &                                     camera,
+    const RayMissFunction                              rayMissFunc
 );
 
 int Application::run()
@@ -98,9 +98,11 @@ int Application::run()
         BACKGROUND_TOP_COLOR
     );
 
-    Image raytracedImage(WINDOW_WIDTH, WINDOW_HEIGHT);
+    static const int MAX_WORKER_THREADS = HARDWARE_MAX_CONCURRENT_THREADS - 1;
 
-    RepeatingSamplePixelTask::SamplingThreadPool threadPool(HARDWARE_MAX_CONCURRENT_THREADS - 1);
+    Image raytracedImage(WINDOW_WIDTH, WINDOW_HEIGHT, MAX_WORKER_THREADS);
+
+    RepeatingSampleImageBandTask::SamplingThreadPool threadPool(MAX_WORKER_THREADS);
     InitSamplingThreadPool(
         threadPool,
         raytracedImage,
@@ -111,6 +113,7 @@ int Application::run()
 
     static const int MS_PER_FRAME = 333; // 3 FPS
 
+    int renderedBandIdx = 0;
     while (!sdl2utils::escOrCrossPressed())
     {
         void * pixels = nullptr;
@@ -119,9 +122,11 @@ int Application::run()
         const int lockResult = SDL_LockTexture(streamingTexture.get(), nullptr, &pixels, &pitch);
         assert(lockResult == 0 && "SDL_LockTexture() must succeed");
 
-        raytracedImage.LockForReading();
+        raytracedImage.LockBand(renderedBandIdx);
 
-        for (int y = 0; y < WINDOW_HEIGHT; y++)
+        const std::pair<int, int> renderedBandYRange = raytracedImage.GetBandYRange(renderedBandIdx);
+
+        for (int y = renderedBandYRange.first; y < renderedBandYRange.second; y++)
         {
             for (int x = 0; x < WINDOW_WIDTH; x++)
             {
@@ -132,7 +137,12 @@ int Application::run()
             }
         }
 
-        raytracedImage.UnlockAfterReading();
+        raytracedImage.UnlockBand(renderedBandIdx);
+
+        BOOST_LOG_TRIVIAL(trace)<< "Rendered band " << renderedBandIdx;
+
+        // Cycle through image bands
+        renderedBandIdx = (renderedBandIdx + 1) % raytracedImage.GetBandsCount();
 
         SDL_UnlockTexture(streamingTexture.get());
 
@@ -158,27 +168,23 @@ static inline Color RawNormalToColor(const Vector3 & rawNormal)
 }
 
 static inline void InitSamplingThreadPool(
-    RepeatingSamplePixelTask::SamplingThreadPool & threadPool,
-    Image &                                        targetImage,
-    const std::vector<Body> &                      scene,
-    const Camera &                                 camera,
-    const RayMissFunction                          rayMissFunc
+    RepeatingSampleImageBandTask::SamplingThreadPool & threadPool,
+    Image &                                            targetImage,
+    const std::vector<Body> &                          scene,
+    const Camera &                                     camera,
+    const RayMissFunction                              rayMissFunc
 )
 {
-    for (int y = 0; y < targetImage.GetHeight(); y++)
+    for (int bandIdx = 0; bandIdx < targetImage.GetBandsCount(); bandIdx++)
     {
-        for (int x = 0; x < targetImage.GetWidth(); x++)
-        {
-            threadPool.EmplaceTask(
-                threadPool,
-                targetImage,
-                scene,
-                camera,
-                rayMissFunc,
-                x,
-                y
-            );
-        }
+        threadPool.EmplaceTask(
+            threadPool,
+            targetImage,
+            scene,
+            camera,
+            rayMissFunc,
+            bandIdx
+        );
     }
 }
 

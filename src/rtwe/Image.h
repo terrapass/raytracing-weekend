@@ -14,7 +14,7 @@ class Image final
 {
 public: // Construction
 
-    Image(const int width, const int height);
+    Image(const int width, const int height, const int bandsCountHint);
 
 public: // Deleted
 
@@ -28,18 +28,24 @@ public: // Interface
 
     inline int GetHeight() const;
 
+    inline int GetBandsCount() const;
+
+    inline std::pair<int, int> GetBandYRange(const int bandIndex) const;
+
+    // TODO: See if the following methods may be replaced with one returning some RTTI entity.
+
+    void LockBand(const int bandIndex) const;
+
+    bool TryLockBand(const int bandIndex) const;
+
     /**
      * @return true if further submissions might affect this pixel's value, false otherwise.
      */
     inline bool SubmitPixelRgb(const int x, const int y, const Vector3 & rgb);
 
-    // TODO: See if the following three methods may be replaced with one returning some RTTI entity.
-
-    void LockForReading() const;
-
     inline Color GetPixelColor(const int x, const int y) const;
 
-    void UnlockAfterReading() const;
+    void UnlockBand(const int bandIndex) const;
 
 private: // Service types
 
@@ -60,11 +66,64 @@ private: // Service types
         }
     };
 
+    struct Band final
+    {
+    public: // Attributes
+
+        int MinY;
+        int MaxY;
+
+        mutable std::mutex Mutex;
+
+#ifdef RTWE_DEBUG
+        mutable bool IsMutexLocked;
+#endif
+
+    public: // Construction
+
+        Band(const int minY, const int maxY):
+            MinY (minY),
+            MaxY (maxY),
+            Mutex()
+#ifdef RTWE_DEBUG
+            , IsMutexLocked(false)
+#endif
+        {
+            // Empty
+        }
+
+        Band(const Band & other):
+            MinY (other.MinY),
+            MaxY (other.MaxY),
+            Mutex()
+#ifdef RTWE_DEBUG
+            , IsMutexLocked(false)
+#endif
+        {
+            assert(!other.IsMutexLocked);
+        }
+    };
+
 private: // Service
 
     inline size_t ToPixelIndex(const int x, const int y) const;
 
     inline bool AreCoordinatesValid(const int x, const int y) const;
+
+    const Band & GetBandByPixelY(const int y) const;
+
+    Band & GetBandByPixelY(const int y);
+
+    std::vector<Band> CreateBands(const int bandsCountHint);
+
+private: // Constants
+
+    static constexpr int COLOR_COMPONENT_STEPS = 255;
+
+    // After this many additions to PixelRgbAccumulator's AccumulatedRgb
+    // resulting pixel value will not change further.
+    static constexpr long MAX_ACCUMULATOR_COUNT =
+        static_cast<long>(1.0f/(static_cast<float>(COLOR_COMPONENT_STEPS)*EPSILON));
 
 private: // Members
 
@@ -73,20 +132,7 @@ private: // Members
 
     std::vector<PixelRgbAccumulator> m_PixelRgbAccumulators;
 
-    // This mutex is locked exclusively only when LockForReading() is called
-    // to prevent worker threads from modifying the image while it's being rendered
-    // (while the renderer repeatedly calls GetPixelColor()).
-    //
-    // Counterintuitively, writers (SubmitPixelRgb()) don't need an exclusive lock,
-    // since the way this method is currently used, modifications of the same elements
-    // in m_PixelRgbAccumulators CANNOT overlap.
-    //
-    // TODO: Introduce debug-only mutex and assertions to enforce this pattern of usage.
-    mutable std::shared_mutex m_ReadingMutex;
-
-#ifdef RTWE_DEBUG
-    mutable bool m_IsReadingMutexLockedExclusively;
-#endif
+    std::vector<Band> m_Bands;
 };
 
 //
@@ -103,23 +149,34 @@ inline int Image::GetHeight() const
     return m_Height;
 }
 
+inline int Image::GetBandsCount() const
+{
+    return static_cast<int>(m_Bands.size());
+}
+
+inline std::pair<int, int> Image::GetBandYRange(const int bandIndex) const
+{
+    const Band & band = m_Bands[bandIndex];
+    return std::make_pair(band.MinY, band.MaxY);
+}
+
 inline bool Image::SubmitPixelRgb(const int x, const int y, const Vector3 & rgb)
 {
-    std::shared_lock lock(m_ReadingMutex);
+    assert(GetBandByPixelY(y).IsMutexLocked && "SubmitPixelRgb() must be called after the corresponding image band has been locked with LockBand()");
 
     PixelRgbAccumulator & accumulator = m_PixelRgbAccumulators[ToPixelIndex(x, y)];
 
     accumulator.AccumulatedRgb += rgb;
     accumulator.Count++;
 
-    const bool isPixelValueFinal = 1.0f/static_cast<float>(accumulator.Count) < EPSILON;
+    const bool isPixelValueFinal = accumulator.Count >= MAX_ACCUMULATOR_COUNT;
 
     return !isPixelValueFinal;
 }
 
 inline Color Image::GetPixelColor(const int x, const int y) const
 {
-    assert(m_IsReadingMutexLockedExclusively && "GetPixelColor() must be called after LockForReading() and before UnlockAfterReading()");
+    assert(GetBandByPixelY(y).IsMutexLocked && "GetPixelColor() must be called after the corresponding image band has been locked with LockBand()");
 
     const PixelRgbAccumulator & accumulator = m_PixelRgbAccumulators[ToPixelIndex(x, y)];
 
